@@ -210,7 +210,7 @@ Run the complete test suite:
 pytest
 ```
 
-Current test suite: **26 passed**
+Current test suite: **27 passed**
 
 Tests cover:
 - Tool detection

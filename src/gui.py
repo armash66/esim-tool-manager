@@ -173,21 +173,24 @@ class ESimToolManagerGUI:
             messagebox.showwarning("Selection Required", "Please select a tool from the table first.")
             return
 
-        tool_name = self.tree.item(selected[0])["values"][0].lower()
+        raw_val = str(self.tree.item(selected[0])["values"][0]).strip()
+        tool_name = raw_val.lower()
         installer = get_installer(tool_name)
         if not installer:
-            messagebox.showinfo("Unmanaged Tool", f"Installation workflow for {tool_name.capitalize()} is not managed.")
+            messagebox.showinfo("Unmanaged Tool", f"Installation workflow for {raw_val} is not managed.")
             return
 
-        self.log(f"Starting installation for {tool_name}...")
+        self.log(f"Starting installation for {raw_val}...")
 
         def _do_install():
             success = installer.install()
             if success:
-                self.log(f"Installation of {tool_name} succeeded.")
+                self.log(f"Installation of {raw_val} completed successfully.")
+                self.root.after(0, lambda: messagebox.showinfo("Installation Complete", f"{raw_val} installation completed successfully."))
                 self.root.after(0, self.refresh_status)
             else:
-                self.log(f"Installation of {tool_name} failed.")
+                self.log(f"Installation of {raw_val} failed.")
+                self.root.after(0, lambda: messagebox.showerror("Installation Failed", f"Installation of {raw_val} failed. Check log for details."))
 
         threading.Thread(target=_do_install, daemon=True).start()
 
