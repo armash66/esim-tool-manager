@@ -1,7 +1,29 @@
 import argparse
 
+from config import load_config, save_config
 from detector import print_tool
 from registry import get_all_detectors, get_detector, get_installer, get_updater, list_tools, TOOLS
+
+
+def cmd_config(args: argparse.Namespace) -> None:
+    cfg = load_config()
+
+    if args.set:
+        key, val = args.set
+        if key in cfg:
+            if isinstance(cfg[key], bool):
+                cfg[key] = val.lower() in ("true", "1", "yes")
+            else:
+                cfg[key] = val
+            save_config(cfg)
+            print(f"Updated config: {key} = {cfg[key]}")
+        else:
+            print(f"Unknown config key '{key}'. Available keys: {', '.join(cfg.keys())}")
+        return
+
+    print("eSim Tool Manager Configuration\n")
+    print(f"Install directory: {cfg.get('install_directory')}")
+    print(f"Auto update:       {cfg.get('auto_update')}\n")
 
 
 def cmd_update(args: argparse.Namespace) -> None:
@@ -121,6 +143,10 @@ def main() -> None:
 
     doctor_parser = subparsers.add_parser("doctor", help="Run environment diagnostics.")
     doctor_parser.set_defaults(func=cmd_doctor)
+
+    config_parser = subparsers.add_parser("config", help="View or modify configuration.")
+    config_parser.add_argument("--set", nargs=2, metavar=("KEY", "VALUE"), help="Set a configuration key and value")
+    config_parser.set_defaults(func=cmd_config)
 
     update_parser = subparsers.add_parser("update", help="Check for or install updates.")
     update_parser.add_argument("tool", nargs="?", help="Optional tool name to update")

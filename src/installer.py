@@ -48,10 +48,13 @@ class KiCadInstaller:
             return False
 
 
+from config import get_install_dir
+
+
 class NgspiceInstaller:
     def __init__(self, archive: Path):
         self.archive = archive
-        self.install_dir = Path.home() / ".esim-tools" / "ngspice"
+        self.install_dir = get_install_dir() / "ngspice"
 
     def install(self) -> bool:
         if not self.archive.is_file():

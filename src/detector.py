@@ -45,12 +45,15 @@ class KiCadDetector:
         return ToolInfo(name="KiCad", installed=True, path=path, version=version)
 
 
+from config import get_install_dir
+
+
 class NgspiceDetector:
     def detect(self) -> ToolInfo:
         path = shutil.which("ngspice")
 
         if path is None:
-            fallback = Path.home() / ".esim-tools" / "ngspice" / "Spice64" / "bin" / "ngspice.exe"
+            fallback = get_install_dir() / "ngspice" / "Spice64" / "bin" / "ngspice.exe"
             if fallback.is_file():
                 path = str(fallback)
 
@@ -60,7 +63,7 @@ class NgspiceDetector:
         # Don't execute ngspice.exe — it launches a GUI and produces no piped output.
         # Read version from metadata.json written by the installer instead.
         version = None
-        metadata_path = Path.home() / ".esim-tools" / "ngspice" / "metadata.json"
+        metadata_path = get_install_dir() / "ngspice" / "metadata.json"
         if metadata_path.is_file():
             with open(metadata_path) as f:
                 version = json.load(f).get("version")
