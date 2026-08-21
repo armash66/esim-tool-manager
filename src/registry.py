@@ -1,6 +1,7 @@
 from pathlib import Path
 from detector import GhdlDetector, KiCadDetector, NgspiceDetector, VerilatorDetector
 from installer import KiCadInstaller, NgspiceInstaller
+from updater import KiCadUpdater, NgspiceUpdater
 
 
 def get_ngspice_installer():
@@ -14,24 +15,28 @@ TOOLS = {
         "category": "core-tool",
         "detector": KiCadDetector,
         "installer": KiCadInstaller,
+        "updater": KiCadUpdater,
     },
     "ngspice": {
         "name": "Ngspice",
         "category": "core-tool",
         "detector": NgspiceDetector,
         "installer": get_ngspice_installer,
+        "updater": NgspiceUpdater,
     },
     "ghdl": {
         "name": "GHDL",
         "category": "core-tool",
         "detector": GhdlDetector,
         "installer": None,
+        "updater": None,
     },
     "verilator": {
         "name": "Verilator",
         "category": "core-tool",
         "detector": VerilatorDetector,
         "installer": None,
+        "updater": None,
     },
 }
 
@@ -49,6 +54,14 @@ def get_installer(tool_name: str):
     if tool and tool["installer"]:
         installer_factory = tool["installer"]
         return installer_factory()
+    return None
+
+
+def get_updater(tool_name: str):
+    tool = TOOLS.get(tool_name.lower())
+    if tool and tool["updater"]:
+        updater_cls = tool["updater"]
+        return updater_cls()
     return None
 
 

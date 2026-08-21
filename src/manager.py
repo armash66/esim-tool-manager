@@ -1,7 +1,36 @@
 import argparse
 
 from detector import print_tool
-from registry import get_all_detectors, get_detector, get_installer, list_tools
+from registry import get_all_detectors, get_detector, get_installer, get_updater, list_tools, TOOLS
+
+
+def cmd_update(args: argparse.Namespace) -> None:
+    if args.tool:
+        tool_name = args.tool.lower()
+        updater = get_updater(tool_name)
+        if not updater:
+            print(f"Update for tool '{args.tool}' is not supported.")
+            return
+        updater.update()
+    else:
+        print("eSim Tool Updates Check\n")
+        for tool_name, info in TOOLS.items():
+            updater = get_updater(tool_name)
+            if not updater:
+                continue
+            status = updater.check_update()
+            if not status["installed"]:
+                print(f"{info['name']}\n  [-] Not installed\n")
+                continue
+
+            print(f"{info['name']}")
+            print(f"  Installed: {status['installed_version']}")
+            print(f"  Available: {status['latest_version']}")
+            if status["needs_update"]:
+                print(f"  [!] Update available: {status['installed_version']} -> {status['latest_version']}")
+            else:
+                print("  [+] Up to date")
+            print()
 
 
 def format_tool_check(info) -> None:
@@ -92,6 +121,10 @@ def main() -> None:
 
     doctor_parser = subparsers.add_parser("doctor", help="Run environment diagnostics.")
     doctor_parser.set_defaults(func=cmd_doctor)
+
+    update_parser = subparsers.add_parser("update", help="Check for or install updates.")
+    update_parser.add_argument("tool", nargs="?", help="Optional tool name to update")
+    update_parser.set_defaults(func=cmd_update)
 
     install_parser = subparsers.add_parser("install", help="Install a tool.")
     install_parser.add_argument("tool", help="Name of the tool to install (e.g. kicad, ngspice)")
