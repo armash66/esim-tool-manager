@@ -87,7 +87,8 @@ class ESimToolManagerGUI:
         toolbar.pack(fill=tk.X)
 
         ttk.Button(toolbar, text="🩺 Doctor Diagnostics", command=self.run_doctor).pack(side=tk.LEFT, padx=5)
-        ttk.Button(toolbar, text="📥 Install Selected Tool", command=self.install_selected).pack(side=tk.LEFT, padx=5)
+        self.install_btn = ttk.Button(toolbar, text="📥 Install Selected Tool", command=self.install_selected)
+        self.install_btn.pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="🔄 Check Updates", command=self.check_updates).pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="🌐 Path Environment", command=self.show_path_env).pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="⚙️ Configuration", command=self.show_config).pack(side=tk.RIGHT, padx=5)
@@ -180,17 +181,21 @@ class ESimToolManagerGUI:
             messagebox.showinfo("Unmanaged Tool", f"Installation workflow for {raw_val} is not managed.")
             return
 
+        self.install_btn.config(state=tk.DISABLED)
         self.log(f"Starting installation for {raw_val}...")
 
         def _do_install():
-            success = installer.install()
-            if success:
-                self.log(f"Installation of {raw_val} completed successfully.")
-                self.root.after(0, lambda: messagebox.showinfo("Installation Complete", f"{raw_val} installation completed successfully."))
-                self.root.after(0, self.refresh_status)
-            else:
-                self.log(f"Installation of {raw_val} failed.")
-                self.root.after(0, lambda: messagebox.showerror("Installation Failed", f"Installation of {raw_val} failed. Check log for details."))
+            try:
+                success = installer.install()
+                if success:
+                    self.log(f"Installation of {raw_val} completed successfully.")
+                    self.root.after(0, lambda: messagebox.showinfo("Installation Complete", f"{raw_val} installation completed successfully."))
+                    self.root.after(0, self.refresh_status)
+                else:
+                    self.log(f"Installation of {raw_val} failed.")
+                    self.root.after(0, lambda: messagebox.showerror("Installation Failed", f"Installation of {raw_val} failed. Check log for details."))
+            finally:
+                self.root.after(0, lambda: self.install_btn.config(state=tk.NORMAL))
 
         threading.Thread(target=_do_install, daemon=True).start()
 
