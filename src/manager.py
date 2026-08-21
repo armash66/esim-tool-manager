@@ -206,6 +206,49 @@ def cmd_doctor(args: argparse.Namespace) -> None:
 def cmd_install(args: argparse.Namespace) -> None:
     logger.info(f"Command executed: install (tool={args.tool})")
     tool_name = args.tool.lower()
+
+    if tool_name == "all":
+        print("Installing all missing tools...\n")
+        skipped = []
+        succeeded = []
+        failed = []
+        for t_name, t_info in TOOLS.items():
+            installer = get_installer(t_name)
+            detector = get_detector(t_name)
+            if not installer or not detector:
+                continue
+
+            det_info = detector.detect()
+            if det_info.installed:
+                print(f"{t_info['name']}: already installed, skipping.")
+                skipped.append(t_info['name'])
+                continue
+
+            print(f"{t_info['name']}: installing...")
+            try:
+                success = installer.install()
+                if success:
+                    print(f"{t_info['name']}: installation completed successfully.")
+                    succeeded.append(t_info['name'])
+                else:
+                    print(f"{t_info['name']}: installation failed.")
+                    failed.append(t_info['name'])
+            except Exception as e:
+                print(f"{t_info['name']}: installation error: {e}")
+                failed.append(t_info['name'])
+
+        print()
+        if failed:
+            print(f"Install All completed with {len(failed)} failure(s): {', '.join(failed)}")
+            logger.error(f"Install All failures: {', '.join(failed)}")
+        else:
+            print("All installation tasks completed.")
+        if skipped:
+            print(f"Skipped (already installed): {', '.join(skipped)}")
+        if succeeded:
+            print(f"Newly installed: {', '.join(succeeded)}")
+        return
+
     installer = get_installer(tool_name)
     detector = get_detector(tool_name)
 
@@ -260,8 +303,8 @@ def main() -> None:
     update_parser.add_argument("tool", nargs="?", help="Optional tool name to update")
     update_parser.set_defaults(func=cmd_update)
 
-    install_parser = subparsers.add_parser("install", help="Install a managed tool.")
-    install_parser.add_argument("tool", help="Name of the tool to install")
+    install_parser = subparsers.add_parser("install", help="Install a managed tool (or 'all' for all missing tools).")
+    install_parser.add_argument("tool", help="Name of the tool to install, or 'all' to install all missing tools")
     install_parser.set_defaults(func=cmd_install)
 
     uninstall_parser = subparsers.add_parser("uninstall", help="Uninstall a managed tool.")

@@ -1,6 +1,7 @@
 import json
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from packaging.version import Version, InvalidVersion
@@ -15,12 +16,35 @@ class ToolInfo:
 
 
 class KiCadDetector:
+    # Windows installation roots where KiCad may be installed
+    _WIN_ROOTS = None
+
+    @staticmethod
+    def _get_windows_roots():
+        """Return candidate KiCad installation base directories on Windows."""
+        import os
+        roots = []
+        # Per-user install (WinGet default for KiCad 10.x)
+        local_app = os.environ.get("LOCALAPPDATA")
+        if local_app:
+            roots.append(Path(local_app) / "Programs" / "KiCad")
+        # System-wide install (legacy / admin installs)
+        prog_files = os.environ.get("ProgramFiles")
+        if prog_files:
+            roots.append(Path(prog_files) / "KiCad")
+        # Fallback if env vars are missing
+        if not roots:
+            roots.append(Path.home() / "AppData" / "Local" / "Programs" / "KiCad")
+            roots.append(Path(r"C:\Program Files\KiCad"))
+        return roots
+
     def detect(self) -> ToolInfo:
         path = shutil.which("kicad-cli")
 
-        if path is None:
-            base = Path(r"C:\Program Files\KiCad")
-            if base.is_dir():
+        if path is None and sys.platform == "win32":
+            for base in self._get_windows_roots():
+                if not base.is_dir():
+                    continue
                 version_folders = []
                 for folder in base.iterdir():
                     try:
@@ -30,18 +54,22 @@ class KiCadDetector:
                         pass
 
                 version_folders.sort(reverse=True)
-
                 for ver, folder in version_folders:
                     candidate = folder / "bin" / "kicad-cli.exe"
                     if candidate.is_file():
                         path = str(candidate)
                         break
+                if path:
+                    break
 
         if path is None:
             return ToolInfo(name="KiCad", installed=False, path=None, version=None)
 
-        result = subprocess.run([path, "--version"], capture_output=True, text=True)
-        version = result.stdout.strip() if result.returncode == 0 else None
+        try:
+            result = subprocess.run([path, "--version"], capture_output=True, text=True)
+            version = result.stdout.strip() if result.returncode == 0 else None
+        except Exception:
+            version = None
         return ToolInfo(name="KiCad", installed=True, path=path, version=version)
 
 

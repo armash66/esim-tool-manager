@@ -1,3 +1,4 @@
+import sys
 import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -33,33 +34,15 @@ class ESimToolManagerGUI:
         title = ttk.Label(
             header,
             text="eSim Tool Manager",
-            font=("Segoe UI" if self.adapter.get_name() == "Windows" else "DejaVu Sans", 16, "bold"),
+            font=("Segoe UI" if sys.platform == "win32" else "DejaVu Sans", 16, "bold"),
         )
         title.pack(side=tk.LEFT)
 
-        platform_lbl = ttk.Label(
-            header,
-            text=f"Platform: {self.adapter.get_name()}",
-            font=("Segoe UI" if self.adapter.get_name() == "Windows" else "DejaVu Sans", 10, "italic"),
-        )
-        platform_lbl.pack(side=tk.LEFT, padx=15)
-
-        refresh_btn = ttk.Button(header, text="🔄 Refresh", command=self.refresh_status)
+        refresh_btn = ttk.Button(header, text="Refresh", command=self.refresh_status)
         refresh_btn.pack(side=tk.RIGHT, padx=3)
 
-        esim_btn = ttk.Button(header, text="🚀 Open eSim", command=self.open_esim)
+        esim_btn = ttk.Button(header, text="Open eSim", command=self.open_esim)
         esim_btn.pack(side=tk.RIGHT, padx=3)
-
-        # Status Summary Frame
-        self.status_bar = ttk.Frame(self.root, padding=(10, 5))
-        self.status_bar.pack(fill=tk.X)
-
-        self.status_lbl = ttk.Label(
-            self.status_bar,
-            text="Environment Status: Checking...",
-            font=("Segoe UI" if self.adapter.get_name() == "Windows" else "DejaVu Sans", 11, "bold"),
-        )
-        self.status_lbl.pack(side=tk.LEFT)
 
         # Tools Treeview Table
         table_frame = ttk.Frame(self.root, padding=10)
@@ -89,16 +72,16 @@ class ESimToolManagerGUI:
         toolbar = ttk.Frame(self.root, padding=10)
         toolbar.pack(fill=tk.X)
 
-        ttk.Button(toolbar, text="🩺 Doctor Diagnostics", command=self.run_doctor).pack(side=tk.LEFT, padx=3)
-        self.install_btn = ttk.Button(toolbar, text="📥 Install Selected", command=self.install_selected)
+        ttk.Button(toolbar, text="Doctor Diagnostics", command=self.run_doctor).pack(side=tk.LEFT, padx=3)
+        self.install_btn = ttk.Button(toolbar, text="Install Selected", command=self.install_selected)
         self.install_btn.pack(side=tk.LEFT, padx=3)
-        self.uninstall_btn = ttk.Button(toolbar, text="🗑️ Uninstall Selected", command=self.uninstall_selected)
+        self.install_all_btn = ttk.Button(toolbar, text="Install All", command=self.install_all)
+        self.install_all_btn.pack(side=tk.LEFT, padx=3)
+        self.uninstall_btn = ttk.Button(toolbar, text="Uninstall Selected", command=self.uninstall_selected)
         self.uninstall_btn.pack(side=tk.LEFT, padx=3)
-        self.uninstall_all_btn = ttk.Button(toolbar, text="🧹 Uninstall All", command=self.uninstall_all)
-        self.uninstall_all_btn.pack(side=tk.LEFT, padx=3)
-        ttk.Button(toolbar, text="🔄 Check Updates", command=self.check_updates).pack(side=tk.LEFT, padx=3)
-        ttk.Button(toolbar, text="🌐 Path Env", command=self.show_path_env).pack(side=tk.LEFT, padx=3)
-        ttk.Button(toolbar, text="⚙️ Config", command=self.show_config).pack(side=tk.RIGHT, padx=3)
+        ttk.Button(toolbar, text="Check Updates", command=self.check_updates).pack(side=tk.LEFT, padx=3)
+        ttk.Button(toolbar, text="Path Environment", command=self.show_path_env).pack(side=tk.LEFT, padx=3)
+        ttk.Button(toolbar, text="Configuration", command=self.show_config).pack(side=tk.RIGHT, padx=3)
 
         # Activity Output Log Window
         log_frame = ttk.LabelFrame(self.root, text="Activity Log", padding=10)
@@ -156,11 +139,6 @@ class ESimToolManagerGUI:
                 path_text = ""
 
             self.tree.insert("", tk.END, values=(name, category, st_text, ver_text, path_text))
-
-        if not core_missing:
-            self.status_lbl.config(text="Toolchain Status: READY", foreground="green")
-        else:
-            self.status_lbl.config(text="Toolchain Status: INCOMPLETE", foreground="#555555")
 
         self.log("Status refreshed.")
 
@@ -267,26 +245,54 @@ class ESimToolManagerGUI:
 
         threading.Thread(target=_do_uninstall, daemon=True).start()
 
-    def uninstall_all(self):
-        if not messagebox.askyesno("Confirm Uninstall All", "Are you sure you want to uninstall all managed tools?"):
-            return
+    def install_all(self):
+        self.install_all_btn.config(state=tk.DISABLED)
+        self.log("Starting installation of all missing tools...")
 
-        self.uninstall_all_btn.config(state=tk.DISABLED)
-        self.log("Starting uninstallation for all managed tools...")
-
-        def _do_uninstall_all():
+        def _do_install_all():
+            skipped = []
+            succeeded = []
+            failed = []
             try:
                 for tool_name, info in TOOLS.items():
                     installer = get_installer(tool_name)
-                    if installer and hasattr(installer, "uninstall"):
-                        self.log(f"Uninstalling {info['name']}...")
-                        installer.uninstall()
-                self.log("All managed tools uninstallation completed.")
+                    detector = get_detector(tool_name)
+                    if not installer or not detector:
+                        continue
+
+                    det_info = detector.detect()
+                    if det_info.installed:
+                        self.log(f"{info['name']}: already installed, skipping.")
+                        skipped.append(info['name'])
+                        continue
+
+                    self.log(f"{info['name']}: installing...")
+                    try:
+                        success = installer.install()
+                        if success:
+                            self.log(f"{info['name']}: installation completed successfully.")
+                            succeeded.append(info['name'])
+                        else:
+                            self.log(f"{info['name']}: installation failed.")
+                            failed.append(info['name'])
+                    except Exception as e:
+                        self.log(f"{info['name']}: installation error: {e}")
+                        failed.append(info['name'])
+
+                # Summary
+                if failed:
+                    self.log(f"Install All completed with {len(failed)} failure(s): {', '.join(failed)}")
+                    self.root.after(0, lambda: messagebox.showerror(
+                        "Install All",
+                        f"Install All completed with {len(failed)} failure(s):\n{', '.join(failed)}\n\nCheck Activity Log for details."
+                    ))
+                else:
+                    self.log("All installation tasks completed.")
                 self.root.after(0, self.refresh_status)
             finally:
-                self.root.after(0, lambda: self.uninstall_all_btn.config(state=tk.NORMAL))
+                self.root.after(0, lambda: self.install_all_btn.config(state=tk.NORMAL))
 
-        threading.Thread(target=_do_uninstall_all, daemon=True).start()
+        threading.Thread(target=_do_install_all, daemon=True).start()
 
     def check_updates(self):
         self.log("Checking updates for managed tools...")

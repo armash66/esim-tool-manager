@@ -20,7 +20,16 @@ def find_winget() -> str | None:
 
 class KiCadInstaller:
     def install(self) -> bool:
-        logger.info("Starting KiCad installation check via WinGet...")
+        logger.info("Starting KiCad installation via WinGet...")
+
+        # Pre-check: if already installed and verified, skip
+        from detector import KiCadDetector
+        pre_info = KiCadDetector().detect()
+        if pre_info.installed:
+            logger.info(f"KiCad already installed: {pre_info.version} at {pre_info.path}")
+            print(f"KiCad is already installed ({pre_info.version}).")
+            return True
+
         winget = find_winget()
         if not winget:
             msg = "WinGet not found. Please install/enable App Installer."
@@ -28,49 +37,75 @@ class KiCadInstaller:
             logger.error(msg)
             return False
 
-        print("Checking WinGet...")
-        print("Installing KiCad via WinGet...")
-        cmd = [
-            winget,
-            "install",
-            "--id", "KiCad.KiCad",
-            "--exact",
-            "--accept-source-agreements",
-            "--accept-package-agreements"
-        ]
+        # Use --scope user --force to handle stale WinGet registrations
+        # and install to per-user location without requiring elevation
+        if sys.platform == "win32":
+            cmd = [
+                winget, "install", "--id", "KiCad.KiCad", "--exact",
+                "--scope", "user", "--force",
+                "--accept-source-agreements", "--accept-package-agreements"
+            ]
+        else:
+            cmd = [
+                winget, "install", "--id", "KiCad.KiCad", "--exact",
+                "--accept-source-agreements", "--accept-package-agreements"
+            ]
 
+        print("Installing KiCad via WinGet...")
         try:
-            result = subprocess.run(cmd, text=True)
-            logger.info(f"KiCad WinGet installation finished successfully (code {result.returncode}).")
-            return True
+            result = subprocess.run(cmd, text=True, capture_output=True)
+            logger.info(f"WinGet exit code: {result.returncode}")
+            if result.stdout:
+                logger.info(f"WinGet stdout: {result.stdout.strip()}")
+            if result.stderr:
+                logger.warning(f"WinGet stderr: {result.stderr.strip()}")
         except Exception as e:
-            msg = f"Error running WinGet: {e}"
-            print(msg)
-            logger.error(msg)
+            logger.error(f"Error running WinGet: {e}")
+            return False
+
+        # Verify installation via detector — never trust exit code alone
+        info = KiCadDetector().detect()
+        if info.installed:
+            logger.info(f"KiCad installation verified: {info.version} at {info.path}")
+            return True
+        else:
+            logger.error("WinGet finished but KiCadDetector could not find kicad-cli.exe.")
             return False
 
     def uninstall(self) -> bool:
         logger.info("Starting KiCad uninstallation via WinGet...")
-        winget = find_winget()
-        if not winget:
-            logger.error("WinGet not found for KiCad uninstall.")
-            return False
+        if sys.platform == "win32":
+            winget = find_winget()
+            if not winget:
+                logger.error("WinGet not found for KiCad uninstall.")
+                return False
 
-        cmd = [winget, "uninstall", "--id", "KiCad.KiCad", "--exact", "--accept-source-agreements"]
-        print("Uninstalling KiCad via WinGet...")
-        try:
-            result = subprocess.run(cmd, text=True)
+            print("Uninstalling KiCad via WinGet...")
+            try:
+                subprocess.run(
+                    [winget, "uninstall", "--id", "KiCad.KiCad", "--exact", "--accept-source-agreements"],
+                    text=True
+                )
+            except Exception as e:
+                logger.error(f"WinGet uninstall error: {e}")
+
+            # Clean up leftover directories in both per-user and system-wide locations
             from detector import KiCadDetector
-            detector = KiCadDetector()
-            info = detector.detect()
-            if not info.installed:
-                logger.info("KiCad uninstalled and verified successfully.")
-                return True
-            else:
-                logger.warning(f"WinGet finished (code {result.returncode}), but KiCad executable was still detected.")
-                return not info.installed
-        except Exception as e:
-            logger.error(f"Error uninstalling KiCad: {e}")
+            for kicad_base in KiCadDetector._get_windows_roots():
+                if kicad_base.is_dir():
+                    try:
+                        shutil.rmtree(kicad_base, ignore_errors=True)
+                        logger.info(f"Cleaned leftover KiCad directory: {kicad_base}")
+                    except Exception as e:
+                        logger.warning(f"Could not clean KiCad directory {kicad_base}: {e}")
+
+        from detector import KiCadDetector
+        info = KiCadDetector().detect()
+        if not info.installed:
+            logger.info("KiCad uninstalled and verified successfully.")
+            return True
+        else:
+            logger.error("KiCad executable was still detected after uninstallation attempt.")
             return False
 
 
