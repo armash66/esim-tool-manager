@@ -1,6 +1,51 @@
 import json
+import shutil
+import subprocess
 import py7zr
 from pathlib import Path
+
+
+def find_winget() -> str | None:
+    """Find winget on PATH or in standard WindowsApps location."""
+    path = shutil.which("winget")
+    if path:
+        return path
+
+    fallback = Path.home() / "AppData" / "Local" / "Microsoft" / "WindowsApps" / "winget.exe"
+    if fallback.is_file():
+        return str(fallback)
+
+    return None
+
+
+class KiCadInstaller:
+    def install(self) -> bool:
+        winget = find_winget()
+        if not winget:
+            print("WinGet not found. Please install/enable App Installer.")
+            return False
+
+        print("Checking WinGet...")
+        print("Installing KiCad via WinGet...")
+        cmd = [
+            winget,
+            "install",
+            "--id", "KiCad.KiCad",
+            "--exact",
+            "--accept-source-agreements",
+            "--accept-package-agreements"
+        ]
+
+        try:
+            result = subprocess.run(cmd, text=True)
+            # 0 = success, 2316632107 / 0x8A15002B = already installed & no upgrade available
+            if result.returncode not in (0, 2316632107, -1978238933):
+                print(f"WinGet returned exit code {result.returncode}.")
+                return False
+            return True
+        except Exception as e:
+            print(f"Error running WinGet: {e}")
+            return False
 
 
 class NgspiceInstaller:

@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 
 from detector import KiCadDetector, NgspiceDetector, print_tool
-from installer import NgspiceInstaller
+from installer import KiCadInstaller, NgspiceInstaller
 
 DETECTORS = [
     KiCadDetector(),
@@ -43,21 +43,26 @@ def cmd_check(args: argparse.Namespace) -> None:
 
 def cmd_install(args: argparse.Namespace) -> None:
     tool_name = args.tool.lower()
-    if tool_name != "ngspice":
+
+    if tool_name == "kicad":
+        installer = KiCadInstaller()
+        detector = KiCadDetector()
+    elif tool_name == "ngspice":
+        archive_path = Path("downloads/ngspice-47_64.7z")
+        installer = NgspiceInstaller(archive_path)
+        detector = NgspiceDetector()
+    else:
         print(f"Tool '{args.tool}' is not currently supported for installation.")
         return
 
-    print("Installing Ngspice...\n")
-    archive_path = Path("downloads/ngspice-47_64.7z")
-    installer = NgspiceInstaller(archive_path)
+    print(f"Installing {args.tool}...\n")
     success = installer.install()
 
     if not success:
         print("\nInstallation failed.")
         return
 
-    print("\nInstallation completed. Verifying installation...\n")
-    detector = NgspiceDetector()
+    print("\nVerifying installation...\n")
     info = detector.detect()
     print_tool(info)
 
