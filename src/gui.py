@@ -124,6 +124,7 @@ class ESimToolManagerGUI:
 
             name = info["name"]
             category = info["category"]
+            has_installer = bool(get_installer(tool_name))
 
             if status.state == DependencyState.INSTALLED:
                 st_text = "✓ Installed"
@@ -133,13 +134,13 @@ class ESimToolManagerGUI:
                 st_text = "⚠ Broken"
                 ver_text = status.version if status.version else "-"
                 path_text = status.path if status.path else ""
-                if tool_name in ("kicad", "ngspice"):
+                if has_installer:
                     core_missing = True
             elif status.state == DependencyState.NOT_INSTALLED:
-                st_text = "✗ Not installed"
+                st_text = "✗ Not installed" if has_installer else "○ Unmanaged"
                 ver_text = "-"
                 path_text = ""
-                if tool_name in ("kicad", "ngspice"):
+                if has_installer:
                     core_missing = True
             else:
                 st_text = "○ Unmanaged"
@@ -193,12 +194,14 @@ class ESimToolManagerGUI:
     def check_updates(self):
         self.log("Checking updates for managed tools...")
         results = []
-        for tool_name in ("kicad", "ngspice"):
+        for tool_name, info in TOOLS.items():
             updater = get_updater(tool_name)
             if updater:
                 st = updater.check_update()
                 status_msg = "Up to date" if not st["needs_update"] else f"Update available: {st['latest_version']}"
-                results.append(f"{tool_name.capitalize()}: {status_msg}")
+                results.append(f"{info['name']}: {status_msg}")
+            else:
+                results.append(f"{info['name']}: Update check unmanaged")
 
         messagebox.showinfo("Updates Status", "\n".join(results))
         self.log("Updates check complete.")
