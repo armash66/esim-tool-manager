@@ -20,9 +20,12 @@ def find_winget() -> str | None:
 
 class KiCadInstaller:
     def install(self) -> bool:
+        logger.info("Starting KiCad installation check via WinGet...")
         winget = find_winget()
         if not winget:
-            print("WinGet not found. Please install/enable App Installer.")
+            msg = "WinGet not found. Please install/enable App Installer."
+            print(msg)
+            logger.error(msg)
             return False
 
         print("Checking WinGet...")
@@ -40,15 +43,23 @@ class KiCadInstaller:
             result = subprocess.run(cmd, text=True)
             # 0 = success, 2316632107 / 0x8A15002B = already installed & no upgrade available
             if result.returncode not in (0, 2316632107, -1978238933):
-                print(f"WinGet returned exit code {result.returncode}.")
+                msg = f"WinGet returned exit code {result.returncode}."
+                print(msg)
+                logger.error(msg)
                 return False
+            logger.info(f"KiCad WinGet installation finished successfully (code {result.returncode}).")
             return True
         except Exception as e:
-            print(f"Error running WinGet: {e}")
+            msg = f"Error running WinGet: {e}"
+            print(msg)
+            logger.error(msg)
             return False
 
 
 from config import get_install_dir
+from logger import get_logger
+
+logger = get_logger()
 
 
 class NgspiceInstaller:
@@ -57,20 +68,30 @@ class NgspiceInstaller:
         self.install_dir = get_install_dir() / "ngspice"
 
     def install(self) -> bool:
+        logger.info(f"Starting Ngspice installation from {self.archive}")
         if not self.archive.is_file():
-            print(f"Archive not found: {self.archive}")
+            msg = f"Archive not found: {self.archive}"
+            print(msg)
+            logger.error(msg)
             return False
 
         self.install_dir.mkdir(parents=True, exist_ok=True)
 
         print(f"Extracting {self.archive} ...")
         print(f"Into       {self.install_dir} ...")
-        with py7zr.SevenZipFile(self.archive, mode="r") as z:
-            z.extractall(path=self.install_dir)
+        try:
+            with py7zr.SevenZipFile(self.archive, mode="r") as z:
+                z.extractall(path=self.install_dir)
+            logger.info(f"Extracted {self.archive} to {self.install_dir}")
+        except Exception as e:
+            logger.error(f"Extraction failed: {e}")
+            return False
 
         exe = self.install_dir / "Spice64" / "bin" / "ngspice.exe"
         if not exe.is_file():
-            print("Installation failed: ngspice.exe not found after extraction.")
+            msg = "Installation failed: ngspice.exe not found after extraction."
+            print(msg)
+            logger.error(msg)
             return False
 
         version = self._parse_version()
@@ -83,8 +104,10 @@ class NgspiceInstaller:
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=4)
 
+        msg = f"Installed Ngspice {version}. Metadata written to {metadata_path}."
         print(f"Installed Ngspice {version}.")
         print(f"Metadata written to {metadata_path}.")
+        logger.info(msg)
         return True
 
     def _parse_version(self) -> str:

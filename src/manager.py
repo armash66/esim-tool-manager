@@ -3,10 +3,14 @@ import argparse
 from config import load_config, save_config
 from dependency import DependencyChecker, DependencyState
 from detector import print_tool
+from logger import get_logger
 from registry import get_all_detectors, get_detector, get_installer, get_updater, list_tools, TOOLS
+
+logger = get_logger()
 
 
 def cmd_config(args: argparse.Namespace) -> None:
+    logger.info(f"Command executed: config (set={args.set})")
     cfg = load_config()
 
     if args.set:
@@ -17,9 +21,13 @@ def cmd_config(args: argparse.Namespace) -> None:
             else:
                 cfg[key] = val
             save_config(cfg)
-            print(f"Updated config: {key} = {cfg[key]}")
+            msg = f"Updated config: {key} = {cfg[key]}"
+            print(msg)
+            logger.info(msg)
         else:
-            print(f"Unknown config key '{key}'. Available keys: {', '.join(cfg.keys())}")
+            msg = f"Unknown config key '{key}'. Available keys: {', '.join(cfg.keys())}"
+            print(msg)
+            logger.warning(msg)
         return
 
     print("eSim Tool Manager Configuration\n")
@@ -28,11 +36,14 @@ def cmd_config(args: argparse.Namespace) -> None:
 
 
 def cmd_update(args: argparse.Namespace) -> None:
+    logger.info(f"Command executed: update (tool={args.tool})")
     if args.tool:
         tool_name = args.tool.lower()
         updater = get_updater(tool_name)
         if not updater:
-            print(f"Update for tool '{args.tool}' is not supported.")
+            msg = f"Update for tool '{args.tool}' is not supported."
+            print(msg)
+            logger.warning(msg)
             return
         updater.update()
     else:
@@ -80,14 +91,17 @@ def check_all_detailed() -> None:
 
 
 def cmd_list(args: argparse.Namespace) -> None:
+    logger.info("Command executed: list")
     check_all()
 
 
 def cmd_check(args: argparse.Namespace) -> None:
+    logger.info("Command executed: check")
     check_all_detailed()
 
 
 def cmd_doctor(args: argparse.Namespace) -> None:
+    logger.info("Command executed: doctor")
     print("eSim Environment Doctor\n")
     checker = DependencyChecker()
     report = checker.check_all()
@@ -101,13 +115,16 @@ def cmd_doctor(args: argparse.Namespace) -> None:
             ver_str = status.version if status.version is not None else "(unavailable)"
             print(f"  [+] Version: {ver_str}")
             print(f"  [+] {status.message}")
+            logger.info(f"Doctor check: {status.name} INSTALLED ({ver_str})")
         elif status.state == DependencyState.BROKEN:
             print("  [!] Broken Installation")
             print(f"  [!] {status.message}")
             missing_tools.append(status.name)
+            logger.warning(f"Doctor check: {status.name} BROKEN")
         elif status.state == DependencyState.NOT_INSTALLED:
             print("  [-] Not installed")
             missing_tools.append(status.name)
+            logger.info(f"Doctor check: {status.name} NOT INSTALLED")
         elif status.state == DependencyState.UNAVAILABLE:
             print("  [o] Detection unavailable")
 
@@ -124,20 +141,27 @@ def cmd_doctor(args: argparse.Namespace) -> None:
     print("\n" + "=" * 45)
     if missing_tools:
         missing_str = ", ".join(missing_tools)
-        print(f"Overall Status: NOT READY (missing/broken: {missing_str})")
+        msg = f"Overall Status: NOT READY (missing/broken: {missing_str})"
+        print(msg)
+        logger.warning(msg)
     else:
-        print("Overall Status: READY")
+        msg = "Overall Status: READY"
+        print(msg)
+        logger.info(msg)
     print("=" * 45 + "\n")
 
 
 def cmd_install(args: argparse.Namespace) -> None:
+    logger.info(f"Command executed: install (tool={args.tool})")
     tool_name = args.tool.lower()
     installer = get_installer(tool_name)
     detector = get_detector(tool_name)
 
     if not installer or not detector:
         supported = ", ".join(list_tools())
-        print(f"Tool '{args.tool}' is not supported. Supported tools: {supported}")
+        msg = f"Tool '{args.tool}' is not supported. Supported tools: {supported}"
+        print(msg)
+        logger.warning(msg)
         return
 
     print(f"Installing {args.tool}...\n")
@@ -145,11 +169,13 @@ def cmd_install(args: argparse.Namespace) -> None:
 
     if not success:
         print("\nInstallation failed.")
+        logger.error(f"Installation of {args.tool} failed.")
         return
 
     print("\nVerifying installation...\n")
     info = detector.detect()
     print_tool(info)
+    logger.info(f"Installation of {args.tool} completed and verified.")
 
 
 def main() -> None:
