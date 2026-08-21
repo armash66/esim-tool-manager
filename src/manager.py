@@ -35,6 +35,26 @@ def cmd_check(args: argparse.Namespace) -> None:
     check_all_detailed()
 
 
+def cmd_doctor(args: argparse.Namespace) -> None:
+    print("eSim Environment Doctor\n")
+    detectors = get_all_detectors()
+    missing_tools = []
+    
+    for detector in detectors:
+        info = detector.detect()
+        format_tool_check(info)
+        if not info.installed:
+            missing_tools.append(info.name)
+
+    print("\n" + "=" * 40)
+    if missing_tools:
+        missing_str = ", ".join(missing_tools)
+        print(f"Overall Status: ATTENTION REQUIRED (missing tools: {missing_str})")
+    else:
+        print("Overall Status: READY")
+    print("=" * 40 + "\n")
+
+
 def cmd_install(args: argparse.Namespace) -> None:
     tool_name = args.tool.lower()
     installer = get_installer(tool_name)
@@ -69,6 +89,9 @@ def main() -> None:
 
     check_parser = subparsers.add_parser("check", help="Perform detection checks and report tool status.")
     check_parser.set_defaults(func=cmd_check)
+
+    doctor_parser = subparsers.add_parser("doctor", help="Run environment diagnostics.")
+    doctor_parser.set_defaults(func=cmd_doctor)
 
     install_parser = subparsers.add_parser("install", help="Install a tool.")
     install_parser.add_argument("tool", help="Name of the tool to install (e.g. kicad, ngspice)")

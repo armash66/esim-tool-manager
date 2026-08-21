@@ -68,6 +68,59 @@ class NgspiceDetector:
         return ToolInfo(name="Ngspice", installed=True, path=path, version=version)
 
 
+class GhdlDetector:
+    def detect(self) -> ToolInfo:
+        path = shutil.which("ghdl")
+
+        if path is None:
+            fallback = Path.home() / ".esim-tools" / "ghdl" / "bin" / "ghdl.exe"
+            if fallback.is_file():
+                path = str(fallback)
+
+        if path is None:
+            return ToolInfo(name="GHDL", installed=False, path=None, version=None)
+
+        result = subprocess.run([path, "--version"], capture_output=True, text=True)
+        version = None
+        if result.returncode == 0:
+            # GHDL --version output first line: "GHDL 4.0.0-dev (3.0.0.r105.g749021b0) [GHDL mcode engine]"
+            first_line = result.stdout.strip().splitlines()[0] if result.stdout.strip() else ""
+            if first_line.startswith("GHDL "):
+                version = first_line.split()[1]
+            else:
+                version = first_line
+
+        return ToolInfo(name="GHDL", installed=True, path=path, version=version)
+
+
+class VerilatorDetector:
+    def detect(self) -> ToolInfo:
+        path = shutil.which("verilator") or shutil.which("verilator_bin")
+
+        if path is None:
+            for exe_name in ("verilator.exe", "verilator_bin.exe"):
+                fallback = Path.home() / ".esim-tools" / "verilator" / "bin" / exe_name
+                if fallback.is_file():
+                    path = str(fallback)
+                    break
+
+        if path is None:
+            return ToolInfo(name="Verilator", installed=False, path=None, version=None)
+
+        result = subprocess.run([path, "--version"], capture_output=True, text=True)
+        version = None
+        if result.returncode == 0:
+            # Verilator --version output: "Verilator 5.020 2024-01-01 ..."
+            first_line = result.stdout.strip().splitlines()[0] if result.stdout.strip() else ""
+            parts = first_line.split()
+            if len(parts) >= 2 and parts[0] == "Verilator":
+                version = parts[1]
+            else:
+                version = first_line
+
+        return ToolInfo(name="Verilator", installed=True, path=path, version=version)
+
+
 def print_tool(info: ToolInfo) -> None:
     print(info.name)
     print("Installed:", "Yes" if info.installed else "No")
