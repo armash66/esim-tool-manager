@@ -116,6 +116,14 @@ class VerilatorDetector:
         path = shutil.which("verilator") or shutil.which("verilator_bin")
 
         if path is None:
+            msys_path = Path("C:/msys64/mingw64/bin/verilator.exe")
+            choco_path = Path("C:/ProgramData/chocolatey/bin/verilator.exe")
+            if msys_path.is_file():
+                path = str(msys_path)
+            elif choco_path.is_file():
+                path = str(choco_path)
+
+        if path is None:
             for exe_name in ("verilator.exe", "verilator_bin.exe"):
                 fallback = Path.home() / ".esim-tools" / "verilator" / "bin" / exe_name
                 if fallback.is_file():
