@@ -53,7 +53,10 @@ class NgspiceDetector:
         path = shutil.which("ngspice")
 
         if path is None:
-            fallback = get_install_dir() / "ngspice" / "Spice64" / "bin" / "ngspice.exe"
+            fallback = get_install_dir() / "ngspice" / "active" / "Spice64" / "bin" / "ngspice.exe"
+            if not fallback.is_file():
+                # Backward compatibility check for unversioned layout
+                fallback = get_install_dir() / "ngspice" / "Spice64" / "bin" / "ngspice.exe"
             if fallback.is_file():
                 path = str(fallback)
 
