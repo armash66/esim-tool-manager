@@ -86,6 +86,7 @@ class ESimToolManagerGUI:
         toolbar = ttk.Frame(self.root, padding=10)
         toolbar.pack(fill=tk.X)
 
+        ttk.Button(toolbar, text="🚀 Open eSim", command=self.open_esim).pack(side=tk.LEFT, padx=3)
         ttk.Button(toolbar, text="🩺 Doctor Diagnostics", command=self.run_doctor).pack(side=tk.LEFT, padx=3)
         self.install_btn = ttk.Button(toolbar, text="📥 Install Selected", command=self.install_selected)
         self.install_btn.pack(side=tk.LEFT, padx=3)
@@ -160,6 +161,35 @@ class ESimToolManagerGUI:
             self.status_lbl.config(text="Toolchain Status: INCOMPLETE", foreground="#555555")
 
         self.log("Status refreshed.")
+
+    def open_esim(self):
+        import shutil
+        import subprocess
+
+        esim_path = shutil.which("esim") or shutil.which("esim.exe")
+        if not esim_path:
+            candidates = [
+                Path("C:/FOSSEE/eSim/eSim.exe"),
+                Path("C:/eSim/eSim.exe"),
+                Path("/usr/bin/esim"),
+                Path("/usr/local/bin/esim"),
+            ]
+            for candidate in candidates:
+                if candidate.is_file():
+                    esim_path = str(candidate)
+                    break
+
+        if esim_path:
+            self.log(f"Launching eSim from {esim_path}...")
+            try:
+                subprocess.Popen([esim_path])
+                self.log("eSim process launched successfully.")
+            except Exception as e:
+                self.log(f"Failed to launch eSim: {e}")
+                messagebox.showerror("eSim Launch Error", f"Failed to launch eSim: {e}")
+        else:
+            self.log("eSim executable not detected on system PATH or default installation locations.")
+            messagebox.showinfo("eSim Not Detected", "eSim application was not detected on system PATH or standard locations.\n\nPlease ensure eSim is installed.")
 
     def run_doctor(self):
         self.log("Running Doctor Diagnostics...")
