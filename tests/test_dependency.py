@@ -24,6 +24,7 @@ def test_dependency_checker_installed(monkeypatch, tmp_path):
     status = checker.check_tool("ngspice")
     assert status.state == DependencyState.INSTALLED
     assert status.version == "47"
+    assert hasattr(status, "is_on_path")
 
 
 def test_dependency_checker_broken(monkeypatch, tmp_path):

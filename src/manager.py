@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 from config import load_config, save_config
 from dependency import DependencyChecker, DependencyState
@@ -7,6 +8,29 @@ from logger import get_logger
 from registry import get_all_detectors, get_detector, get_installer, get_updater, list_tools, TOOLS
 
 logger = get_logger()
+
+
+def cmd_env(args: argparse.Namespace) -> None:
+    logger.info("Command executed: env")
+    checker = DependencyChecker()
+    report = checker.check_all()
+
+    print("eSim Environment Variable Configuration\n")
+    bin_paths = []
+    for tool_name, status in report["tools"].items():
+        if status.state == DependencyState.INSTALLED and status.path:
+            parent_dir = str(Path(status.path).parent)
+            bin_paths.append(parent_dir)
+            status_str = "ON PATH" if status.is_on_path else "MISSING FROM PATH"
+            print(f"{status.name}: {parent_dir} [{status_str}]")
+
+    print("\nTo configure PATH in PowerShell:")
+    ps_path = ";".join(bin_paths)
+    print(f'  $env:Path += ";{ps_path}"')
+
+    print("\nTo configure PATH in Bash / Linux:")
+    bash_path = ":".join(bin_paths)
+    print(f'  export PATH="$PATH:{bash_path}"\n')
 
 
 def cmd_config(args: argparse.Namespace) -> None:
@@ -115,7 +139,9 @@ def cmd_doctor(args: argparse.Namespace) -> None:
             ver_str = status.version if status.version is not None else "(unavailable)"
             print(f"  [+] Version: {ver_str}")
             print(f"  [+] {status.message}")
-            logger.info(f"Doctor check: {status.name} INSTALLED ({ver_str})")
+            path_msg = "Path in system PATH" if status.is_on_path else "Path NOT in system PATH (run 'env' for instructions)"
+            print(f"  {'[+]' if status.is_on_path else '[!]'} {path_msg}")
+            logger.info(f"Doctor check: {status.name} INSTALLED ({ver_str}), on_path={status.is_on_path}")
         elif status.state == DependencyState.BROKEN:
             print("  [!] Broken Installation")
             print(f"  [!] {status.message}")
@@ -193,6 +219,9 @@ def main() -> None:
 
     doctor_parser = subparsers.add_parser("doctor", help="Run environment diagnostics.")
     doctor_parser.set_defaults(func=cmd_doctor)
+
+    env_parser = subparsers.add_parser("env", help="Show environment variable and PATH configuration.")
+    env_parser.set_defaults(func=cmd_env)
 
     config_parser = subparsers.add_parser("config", help="View or modify configuration.")
     config_parser.add_argument("--set", nargs=2, metavar=("KEY", "VALUE"), help="Set a configuration key and value")

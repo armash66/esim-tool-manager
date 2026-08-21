@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from config import load_config, get_install_dir
@@ -17,7 +18,16 @@ class DependencyStatus:
     state: str
     path: str | None
     version: str | None
+    is_on_path: bool
     message: str
+
+
+def is_bin_on_system_path(executable_path: str | None) -> bool:
+    if not executable_path:
+        return False
+    exe_dir = str(Path(executable_path).parent).lower()
+    system_paths = [p.strip().lower() for p in os.environ.get("PATH", "").split(os.pathsep) if p.strip()]
+    return exe_dir in system_paths
 
 
 class DependencyChecker:
@@ -29,6 +39,7 @@ class DependencyChecker:
                 state=DependencyState.UNAVAILABLE,
                 path=None,
                 version=None,
+                is_on_path=False,
                 message="Detection unavailable",
             )
 
@@ -49,6 +60,7 @@ class DependencyChecker:
                         state=DependencyState.BROKEN,
                         path=meta_path,
                         version=meta.get("version"),
+                        is_on_path=is_bin_on_system_path(meta_path),
                         message="Executable missing (broken installation)",
                     )
             except Exception:
@@ -61,6 +73,7 @@ class DependencyChecker:
                     state=DependencyState.BROKEN,
                     path=info.path,
                     version=info.version,
+                    is_on_path=is_bin_on_system_path(info.path),
                     message="Executable missing (broken installation)",
                 )
 
@@ -69,6 +82,7 @@ class DependencyChecker:
                 state=DependencyState.INSTALLED,
                 path=info.path,
                 version=info.version,
+                is_on_path=is_bin_on_system_path(info.path),
                 message="Executable available",
             )
         else:
@@ -77,6 +91,7 @@ class DependencyChecker:
                 state=DependencyState.NOT_INSTALLED,
                 path=None,
                 version=None,
+                is_on_path=False,
                 message="Not installed",
             )
 
