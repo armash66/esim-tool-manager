@@ -23,8 +23,9 @@ The current implementation targets Windows and uses platform-specific installati
 - Environment and PATH diagnostics
 - Dependency and installation health checks
 - Persistent audit logging
-- CLI-based operation
-- Automated unit and integration tests
+- Dual Interfaces: Command Line Interface (CLI) and Desktop Graphical User Interface (GUI)
+- Cross-Platform Adapters (Windows & Linux abstraction)
+- Automated unit and integration tests (22 tests)
 
 ## Supported Tools
 
@@ -40,23 +41,23 @@ GHDL and Verilator are currently registered and detectable, while their installa
 ## Architecture
 
 ```text
-                         CLI
-                          |
-                       Manager
-                          |
-                     Tool Registry
-                _________|_________
-               |         |         |
-          Detectors  Installers  Updaters
-               |         |         |
-               |         |         |
-               +---------+---------+
-                         |
-                Dependency Checker
-                         |
-             +-----------+-----------+
-             |                       |
-        Configuration             Logger
+                         CLI / Desktop GUI (gui.py)
+                                    |
+                                 Manager
+                                    |
+                               Tool Registry
+                   _________________|_________________
+                  |                 |                 |
+             Detectors         Installers        Updaters
+                  |                 |                 |
+                  +-----------------+-----------------+
+                                    |
+                           Dependency Checker
+                                    |
+                +-------------------+-------------------+
+                |                   |                   |
+          Configuration          Logger          Platform Adapter
+                                              (Windows / Linux)
 ```
 
 The registry provides a common lookup layer for tool-specific detectors, installers, and updaters. Tool implementations remain responsible for platform-specific behavior.
@@ -123,6 +124,12 @@ pip install -r requirements.txt
 ## Usage
 
 The manager is operated through the command line.
+
+### Launch Desktop GUI
+```bash
+python src\manager.py gui
+```
+Or directly run `python src\gui.py`.
 
 ### List managed tools
 ```bash
@@ -205,7 +212,7 @@ Run the complete test suite:
 pytest
 ```
 
-Current test suite: **19 passed**
+Current test suite: **22 passed**
 
 Tests cover:
 - Tool detection

@@ -12,6 +12,12 @@ logger = get_logger()
 
 import sys
 
+def cmd_gui(args: argparse.Namespace) -> None:
+    logger.info("Command executed: gui")
+    from gui import launch_gui
+    launch_gui()
+
+
 def cmd_env(args: argparse.Namespace) -> None:
     logger.info("Command executed: env")
     checker = DependencyChecker()
@@ -239,6 +245,9 @@ def main() -> None:
 
     doctor_parser = subparsers.add_parser("doctor", help="Run environment diagnostics.")
     doctor_parser.set_defaults(func=cmd_doctor)
+
+    gui_parser = subparsers.add_parser("gui", help="Launch Tkinter desktop GUI.")
+    gui_parser.set_defaults(func=cmd_gui)
 
     env_parser = subparsers.add_parser("env", help="Show environment variable and PATH configuration.")
     env_parser.set_defaults(func=cmd_env)
