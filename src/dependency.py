@@ -35,8 +35,26 @@ class DependencyChecker:
         detector = tool["detector"]()
         info = detector.detect()
 
+        # Check for broken installation: metadata exists but binary is missing/invalid
+        metadata_path = get_install_dir() / tool_name.lower() / "metadata.json"
+        if metadata_path.is_file():
+            try:
+                import json
+                with open(metadata_path) as f:
+                    meta = json.load(f)
+                meta_path = meta.get("path")
+                if meta_path and not Path(meta_path).is_file():
+                    return DependencyStatus(
+                        name=info.name,
+                        state=DependencyState.BROKEN,
+                        path=meta_path,
+                        version=meta.get("version"),
+                        message="Executable missing (broken installation)",
+                    )
+            except Exception:
+                pass
+
         if info.installed:
-            # Check if executable path actually exists on disk (broken installation check)
             if info.path and not Path(info.path).is_file():
                 return DependencyStatus(
                     name=info.name,
