@@ -144,10 +144,7 @@ def cmd_doctor(args: argparse.Namespace) -> None:
 
     print("Core Managed Tools")
     core_missing = []
-    for tool_name in ("kicad", "ngspice"):
-        status = report["tools"].get(tool_name)
-        if not status:
-            continue
+    for tool_name, status in report["tools"].items():
         print(f"\n{status.name}")
         if status.state == DependencyState.INSTALLED:
             print("  [+] Installed")
@@ -166,19 +163,6 @@ def cmd_doctor(args: argparse.Namespace) -> None:
             print("  [-] Not installed")
             core_missing.append(status.name)
             logger.info(f"Doctor check: {status.name} NOT INSTALLED")
-
-    print("\nRegistered Tools (Installation Unmanaged)")
-    for tool_name in ("ghdl", "verilator"):
-        status = report["tools"].get(tool_name)
-        if not status:
-            continue
-        print(f"\n{status.name}")
-        if status.state == DependencyState.INSTALLED:
-            print("  [+] Installed")
-            ver_str = status.version if status.version is not None else "(unavailable)"
-            print(f"  [+] Version: {ver_str}")
-        else:
-            print("  [o] Detection / Installation not managed")
 
     print("\nConfiguration")
     env = report["environment"]
