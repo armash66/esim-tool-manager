@@ -301,10 +301,17 @@ class ESimToolManagerGUI:
             updater = get_updater(tool_name)
             if updater:
                 st = updater.check_update()
-                status_msg = "Up to date" if not st["needs_update"] else f"Update available: {st['latest_version']}"
+                if not st["installed"]:
+                    status_msg = "Not installed"
+                elif st.get("error"):
+                    status_msg = st["error"]
+                elif st["needs_update"]:
+                    status_msg = f"Update available: {st['installed_version']} → {st['latest_version']}"
+                else:
+                    status_msg = f"Up to date ({st['installed_version']})"
                 results.append(f"{info['name']}: {status_msg}")
             else:
-                results.append(f"{info['name']}: Update check unmanaged")
+                results.append(f"{info['name']}: Unable to determine update status")
 
         messagebox.showinfo("Updates Status", "\n".join(results))
         self.log("Updates check complete.")

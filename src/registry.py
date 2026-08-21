@@ -1,7 +1,7 @@
 from pathlib import Path
 from detector import GhdlDetector, KiCadDetector, NgspiceDetector, VerilatorDetector
 from installer import GhdlInstaller, KiCadInstaller, NgspiceInstaller, VerilatorInstaller
-from updater import KiCadUpdater, NgspiceUpdater
+from updater import GhdlUpdater, KiCadUpdater, NgspiceUpdater, VerilatorUpdater
 
 
 def get_ngspice_installer():
@@ -29,14 +29,14 @@ TOOLS = {
         "category": "core-tool",
         "detector": GhdlDetector,
         "installer": GhdlInstaller,
-        "updater": None,
+        "updater": GhdlUpdater,
     },
     "verilator": {
         "name": "Verilator",
         "category": "core-tool",
         "detector": VerilatorDetector,
         "installer": VerilatorInstaller,
-        "updater": None,
+        "updater": VerilatorUpdater,
     },
 }
 

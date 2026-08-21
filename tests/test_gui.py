@@ -15,9 +15,9 @@ def test_gui_registry_wiring_all_tools():
 
 
 def test_gui_updaters_wiring():
-    for tool_name in ("kicad", "ngspice"):
+    for tool_name in ("kicad", "ngspice", "ghdl", "verilator"):
         updater = get_updater(tool_name)
-        assert updater is not None
+        assert updater is not None, f"Updater for {tool_name} must be registered."
 
 
 def test_gui_installer_execution_mocked(monkeypatch):
