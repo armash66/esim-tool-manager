@@ -73,10 +73,13 @@ python -m pip install -r requirements.txt
 |---|---|
 | `python src/manager.py list` | List all managed tools and brief installation status |
 | `python src/manager.py check` | Display detailed tool status including version and executable path |
-| `python src/manager.py doctor` | Run comprehensive health diagnostics on the toolchain |
+| `python src/manager.py doctor [--json]` | Run comprehensive health diagnostics (supports `--json` output) |
 | `python src/manager.py install <tool>` | Install a specific tool (`kicad`, `ngspice`, `ghdl`, `verilator`) |
-| `python src/manager.py install all` | Install all missing tools while skipping healthy installations |
+| `python src/manager.py install all [--dry-run]` | Install all missing tools while skipping healthy installations |
 | `python src/manager.py update [tool]` | Check for available updates or trigger upgrade for a tool |
+| `python src/manager.py snapshot` | Create a JSON snapshot manifest of the current toolchain state |
+| `python src/manager.py verify --manifest <file>` | Verify environment state against a toolchain manifest |
+| `python src/manager.py sync --manifest <file> [--dry-run]` | Synchronize toolchain environment to match a target manifest |
 | `python src/manager.py config` | View or update configuration settings |
 | `python src/manager.py env` | Inspect tool binary paths and print shell PATH export commands |
 | `python src/manager.py gui` | Launch the Desktop GUI application |
@@ -122,13 +125,14 @@ Run the automated test suite with pytest:
 pytest -v
 ```
 
-Current test suite: **49 passed**
+Current test suite: **55 passed**
 
-Tests cover tool detection, multi-strategy installation, metadata persistence, registry wiring, dependency health states, configuration, CLI subcommands, GUI wiring, version comparison, and safe upgrade/rollback logic.
+Tests cover tool detection, multi-strategy installation, metadata persistence, registry wiring, dependency health states, configuration, CLI subcommands, GUI wiring, version comparison, manifest planning, dry-run safety, and safe upgrade/rollback logic.
 
 ## Documentation
 
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Component design, data flows, and subsystem architecture
+- [TOOLCHAIN_MANIFEST.md](docs/TOOLCHAIN_MANIFEST.md) - Reproducible environment manifests, snapshotting, and dry-run guide
 - [USER_GUIDE.md](docs/USER_GUIDE.md) - Detailed operating guide for CLI commands and Desktop GUI
 - [REQUIREMENTS.md](docs/REQUIREMENTS.md) - Mapping of implementation against technical requirements
 
@@ -139,6 +143,7 @@ esim-tool-manager/
 ├── src/
 │   ├── manager.py          # CLI entry point and subcommand handlers
 │   ├── gui.py              # Tkinter Desktop GUI interface
+│   ├── manifest.py         # Declarative manifests, planner, and OperationResult
 │   ├── registry.py         # Central tool registry
 │   ├── detector.py         # Tool detection logic
 │   ├── installer.py        # Installation workflows

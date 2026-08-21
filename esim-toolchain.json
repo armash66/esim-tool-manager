@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "tools": {
+    "kicad": {
+      "installed": true,
+      "version": "10.0.5",
+      "path": "C:\\Users\\Armash Ansari\\AppData\\Local\\Programs\\KiCad\\10.0\\bin\\kicad-cli.exe"
+    },
+    "ngspice": {
+      "installed": true,
+      "version": "47",
+      "path": "C:\\Users\\Armash Ansari\\.esim-tools\\ngspice\\active\\Spice64\\bin\\ngspice.exe"
+    },
+    "ghdl": {
+      "installed": true,
+      "version": "6.0.0",
+      "path": "C:\\Users\\Armash Ansari\\AppData\\Local\\Microsoft\\WinGet\\Packages\\ghdl.ghdl.ucrt64.mcode_Microsoft.Winget.Source_8wekyb3d8bbwe\\bin\\ghdl.exe"
+    },
+    "verilator": {
+      "installed": true,
+      "version": "5.040",
+      "path": "C:\\msys64\\mingw64\\bin\\verilator_bin.exe"
+    }
+  }
+}
