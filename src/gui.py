@@ -155,9 +155,9 @@ class ESimToolManagerGUI:
             self.tree.insert("", tk.END, values=(name, category, st_text, ver_text, path_text))
 
         if not core_missing:
-            self.status_lbl.config(text="Overall Core Status: READY", foreground="green")
+            self.status_lbl.config(text="Toolchain Status: READY", foreground="green")
         else:
-            self.status_lbl.config(text="Overall Core Status: NOT READY", foreground="red")
+            self.status_lbl.config(text="Toolchain Status: INCOMPLETE", foreground="#555555")
 
         self.log("Status refreshed.")
 
@@ -193,7 +193,6 @@ class ESimToolManagerGUI:
                 success = installer.install()
                 if success:
                     self.log(f"Installation of {raw_val} completed successfully.")
-                    self.root.after(0, lambda: messagebox.showinfo("Installation Complete", f"{raw_val} installation completed successfully."))
                     self.root.after(0, self.refresh_status)
                 else:
                     self.log(f"Installation of {raw_val} failed.")
@@ -227,7 +226,6 @@ class ESimToolManagerGUI:
                 success = installer.uninstall()
                 if success:
                     self.log(f"Uninstallation of {raw_val} completed successfully.")
-                    self.root.after(0, lambda: messagebox.showinfo("Uninstall Complete", f"{raw_val} uninstalled successfully."))
                     self.root.after(0, self.refresh_status)
                 else:
                     self.log(f"Uninstallation of {raw_val} failed.")
@@ -252,7 +250,6 @@ class ESimToolManagerGUI:
                         self.log(f"Uninstalling {info['name']}...")
                         installer.uninstall()
                 self.log("All managed tools uninstallation completed.")
-                self.root.after(0, lambda: messagebox.showinfo("Uninstall All Complete", "All managed tools uninstalled."))
                 self.root.after(0, self.refresh_status)
             finally:
                 self.root.after(0, lambda: self.uninstall_all_btn.config(state=tk.NORMAL))

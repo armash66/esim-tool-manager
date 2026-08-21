@@ -193,11 +193,11 @@ def cmd_doctor(args: argparse.Namespace) -> None:
     print("\n" + "=" * 45)
     if core_missing:
         missing_str = ", ".join(core_missing)
-        msg = f"Overall Core Environment Status: NOT READY (missing/broken: {missing_str})"
+        msg = f"Toolchain Status: INCOMPLETE (missing/broken: {missing_str})"
         print(msg)
         logger.warning(msg)
     else:
-        msg = "Overall Core Environment Status: READY"
+        msg = "Toolchain Status: READY"
         print(msg)
         logger.info(msg)
     print("=" * 45 + "\n")
