@@ -1,3 +1,4 @@
+import json
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -57,8 +58,14 @@ class NgspiceDetector:
             return ToolInfo(name="Ngspice", installed=False, path=None, version=None)
 
         # Don't execute ngspice.exe — it launches a GUI and produces no piped output.
-        # Version will be read from metadata.json written by the installer.
-        return ToolInfo(name="Ngspice", installed=True, path=path, version=None)
+        # Read version from metadata.json written by the installer instead.
+        version = None
+        metadata_path = Path.home() / ".esim-tools" / "ngspice" / "metadata.json"
+        if metadata_path.is_file():
+            with open(metadata_path) as f:
+                version = json.load(f).get("version")
+
+        return ToolInfo(name="Ngspice", installed=True, path=path, version=version)
 
 
 def print_tool(info: ToolInfo) -> None:
