@@ -106,9 +106,35 @@ class DependencyChecker:
             "config_valid": True,
         }
 
+    def check_prerequisites(self) -> dict:
+        import sys
+        import shutil
+        prereqs = {}
+        if sys.platform == "win32":
+            winget_path = shutil.which("winget") or (Path.home() / "AppData" / "Local" / "Microsoft" / "WindowsApps" / "winget.exe")
+            winget_avail = Path(winget_path).is_file() if winget_path else False
+            msys2_pacman = Path("C:/msys64/usr/bin/pacman.exe").is_file() or (shutil.which("pacman") is not None)
+
+            prereqs["WinGet"] = {
+                "available": winget_avail,
+                "message": "Available" if winget_avail else "Not found (required for KiCad / GHDL)"
+            }
+            prereqs["MSYS2 (pacman)"] = {
+                "available": msys2_pacman,
+                "message": "Available" if msys2_pacman else "Not found (required for Verilator on Windows)"
+            }
+        else:
+            apt_avail = shutil.which("apt-get") is not None or shutil.which("apt") is not None
+            prereqs["System Package Manager (apt)"] = {
+                "available": apt_avail,
+                "message": "Available" if apt_avail else "Not found"
+            }
+        return prereqs
+
     def check_all(self) -> dict:
         results = {}
         for tool_name in TOOLS.keys():
             results[tool_name] = self.check_tool(tool_name)
         env = self.check_environment()
-        return {"tools": results, "environment": env}
+        prereqs = self.check_prerequisites()
+        return {"tools": results, "environment": env, "prerequisites": prereqs}

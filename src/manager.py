@@ -161,6 +161,7 @@ def cmd_doctor(args: argparse.Namespace) -> None:
         import json
         json_out = {
             "tools": {},
+            "prerequisites": report.get("prerequisites", {}),
             "environment": report["environment"],
             "status": "READY" if not any(
                 st.state in (DependencyState.NOT_INSTALLED, DependencyState.BROKEN)
@@ -202,6 +203,18 @@ def cmd_doctor(args: argparse.Namespace) -> None:
             core_missing.append(status.name)
             logger.info(f"Doctor check: {status.name} NOT INSTALLED")
 
+    print("\nPrerequisites")
+    prereqs = report.get("prerequisites", {})
+    recommendations = []
+    for name, pdata in prereqs.items():
+        symbol = "[+]" if pdata["available"] else "[!]"
+        print(f"  {symbol} {name}: {pdata['message']}")
+        if not pdata["available"]:
+            if "MSYS2" in name:
+                recommendations.append("Install MSYS2 (https://www.msys2.org/) to enable Verilator installation.")
+            elif "WinGet" in name:
+                recommendations.append("Install/enable App Installer (WinGet) to manage KiCad and GHDL.")
+
     print("\nConfiguration")
     env = report["environment"]
     if env["install_dir_exists"]:
@@ -211,6 +224,11 @@ def cmd_doctor(args: argparse.Namespace) -> None:
 
     if env["config_valid"]:
         print("  [+] Configuration valid")
+
+    if recommendations:
+        print("\nRecommendations:")
+        for rec in recommendations:
+            print(f"  * {rec}")
 
     print("\n" + "=" * 45)
     if core_missing:

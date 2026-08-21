@@ -168,7 +168,12 @@ class VerilatorInstaller:
             if pacman.is_file():
                 cmd = [str(pacman), "-S", "--noconfirm", "mingw-w64-x86_64-verilator"]
             else:
-                msg = "Verilator installation on Windows requires MSYS2 (pacman not found at C:\\msys64\\usr\\bin\\pacman.exe). Please install MSYS2 or run on Linux."
+                msg = (
+                    "\nVerilator installation on Windows requires MSYS2 (pacman),\n"
+                    "but MSYS2 was not found at C:\\msys64\\usr\\bin\\pacman.exe.\n\n"
+                    "Recommendation: Install MSYS2 from https://www.msys2.org/\n"
+                    "and ensure pacman is available, then retry the installation."
+                )
                 print(msg)
                 logger.error(msg)
                 return False
