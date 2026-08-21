@@ -66,7 +66,7 @@ Updaters query upstream feeds (WinGet manifests, MSYS2 pacman database) and comp
 Configuration settings (`install_directory`, `auto_update`) persist in `~/.esim-tools/config.json` and are manageable via CLI (`config --set key value`) or GUI.
 
 ### 3.7 Diagnostics
-The `doctor` command inspects binary availability, executable paths, system `PATH` inclusion, directory existence, and config validity. Supports `--json` for CI/CD integration.
+The `doctor` command inspects binary availability, executable paths, system `PATH` inclusion, directory existence, and config validity. The diagnostic system checks the state of the managed toolchain as well as platform prerequisites required by the installers (such as WinGet and MSYS2/pacman on Windows, or standard package managers on Linux). When a prerequisite is unavailable, the diagnostic output reports it and provides an actionable recommendation. Supports `--json` for CI/CD integration.
 
 ### 3.8 Toolchain Snapshot, Verification & Sync
 - **`snapshot`**: Exports active toolchain state to `esim-toolchain.json`.
@@ -163,6 +163,7 @@ The system uses modular Python classes bound together by `registry.py`:
 - `detector.py`: Contains `ToolInfo` dataclass and detector classes (`KiCadDetector`, `NgspiceDetector`, `GhdlDetector`, `VerilatorDetector`).
 - `installer.py`: Encapsulates installation logic (`KiCadInstaller`, `NgspiceInstaller`, `GhdlInstaller`, `VerilatorInstaller`).
 - `updater.py`: Implements update checking and comparison (`KiCadUpdater`, `NgspiceUpdater`, `GhdlUpdater`, `VerilatorUpdater`).
+- `dependency.py`: Implements `DependencyChecker` for environment status, binary validation, and platform prerequisite checking (`WinGet`, `MSYS2 / pacman`).
 - `manifest.py`: Implements `OperationResult`, `PlannedAction`, `ToolchainPlanner`, and `ToolchainManager`.
 - `platform_adapter.py`: Implements `WindowsAdapter` and `LinuxAdapter`.
 
@@ -229,7 +230,7 @@ Processes run non-interactively using `--accept-source-agreements` and `--accept
 ## 7. Error Handling & Recovery
 
 ### 7.1 Installation Failures
-If a package manager returns non-zero or fails to write executables, the installer returns `OperationResult(success=False)` and logs stdout/stderr details.
+Before performing an installation that has platform-specific prerequisites, the installer checks whether those prerequisites are available. If a required dependency is missing (e.g. MSYS2/pacman for Verilator on Windows), installation stops with a clear explanation and instructions for resolving the prerequisite. If a package manager returns non-zero or fails to write executables, the installer returns `OperationResult(success=False)` and logs stdout/stderr details.
 
 ### 7.2 Permission & UAC
 Per-user WinGet scopes (`--scope user`) avoid unnecessary Administrator prompts. If elevated operations are required, targeted PowerShell `Start-Process -Verb RunAs -Wait` calls elevate only the child subprocess.

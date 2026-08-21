@@ -18,9 +18,15 @@ python -m pip install -r requirements.txt
 
 The required packages (`packaging`, `py7zr`, `pytest`) are installed automatically.
 
-### External Tool Prerequisites (Windows)
-- **WinGet** (Windows Package Manager / App Installer): Used for KiCad and GHDL.
-- **MSYS2** (Optional): Provides native `pacman` binaries for Verilator.
+### Tool Installation Prerequisites
+The manager checks platform prerequisites before performing installations.
+
+On Windows:
+- **WinGet** is required for tools that use WinGet (KiCad, GHDL).
+- **MSYS2 (pacman)** is required for Verilator installation on Windows.
+
+On Linux:
+- The supported system package manager (`apt`) is used where applicable.
 
 ### Permissions
 - The manager runs as a standard user process. Elevated Administrator prompts (UAC) appear only if required by specific package installer subprocesses.
@@ -120,7 +126,15 @@ Run environment health diagnostics:
 python src/manager.py doctor
 ```
 
-Outputs overall state:
+The `doctor` command checks both the installed toolchain and the platform prerequisites required by the supported installers. For example, on Windows it reports the availability of WinGet and MSYS2/pacman:
+
+```text
+Prerequisites
+  [+] WinGet: Available
+  [+] MSYS2 (pacman): Available
+```
+
+If a required prerequisite is missing, the diagnostic output provides an actionable recommendation. Overall state is summarized as:
 - `Toolchain Status: READY` (all core tools installed and functional)
 - `Toolchain Status: INCOMPLETE` (one or more tools missing or broken)
 
@@ -171,6 +185,7 @@ python src/manager.py sync --manifest esim-toolchain.json
 |---|---|---|
 | **Tool listed as `Not installed` after installer finished** | Binary not found in expected path | Run `python src/manager.py check` to trigger a fresh search. |
 | **WinGet reports installed but binary is missing** | Stale WinGet package registration | Re-run `python src/manager.py install kicad` to repair/reinstall the installation. |
+| **Verilator installation reports MSYS2/pacman missing** | Required Windows prerequisite is not available | Install MSYS2 from https://www.msys2.org/, ensure pacman is available, then retry installation. |
 | **UAC prompt cancelled** | Subprocess permission request denied | Re-run command and accept UAC elevation prompt. |
 | **Tool installed but missing from shell PATH** | Directory not in system PATH | Run `python src/manager.py env` to view export commands. |
 | **`Unable to determine latest version`** | Package manager query failed | Check network connection or package manager availability. |
