@@ -1,6 +1,7 @@
 import argparse
 
 from config import load_config, save_config
+from dependency import DependencyChecker, DependencyState
 from detector import print_tool
 from registry import get_all_detectors, get_detector, get_installer, get_updater, list_tools, TOOLS
 
@@ -88,22 +89,45 @@ def cmd_check(args: argparse.Namespace) -> None:
 
 def cmd_doctor(args: argparse.Namespace) -> None:
     print("eSim Environment Doctor\n")
-    detectors = get_all_detectors()
-    missing_tools = []
-    
-    for detector in detectors:
-        info = detector.detect()
-        format_tool_check(info)
-        if not info.installed:
-            missing_tools.append(info.name)
+    checker = DependencyChecker()
+    report = checker.check_all()
 
-    print("\n" + "=" * 40)
+    print("Core Tools")
+    missing_tools = []
+    for tool_name, status in report["tools"].items():
+        print(f"\n{status.name}")
+        if status.state == DependencyState.INSTALLED:
+            print("  [+] Installed")
+            ver_str = status.version if status.version is not None else "(unavailable)"
+            print(f"  [+] Version: {ver_str}")
+            print(f"  [+] {status.message}")
+        elif status.state == DependencyState.BROKEN:
+            print("  [!] Broken Installation")
+            print(f"  [!] {status.message}")
+            missing_tools.append(status.name)
+        elif status.state == DependencyState.NOT_INSTALLED:
+            print("  [-] Not installed")
+            missing_tools.append(status.name)
+        elif status.state == DependencyState.UNAVAILABLE:
+            print("  [o] Detection unavailable")
+
+    print("\nConfiguration")
+    env = report["environment"]
+    if env["install_dir_exists"]:
+        print(f"  [+] Install directory exists ({env['install_dir_path']})")
+    else:
+        print(f"  [-] Install directory missing ({env['install_dir_path']})")
+
+    if env["config_valid"]:
+        print("  [+] Configuration valid")
+
+    print("\n" + "=" * 45)
     if missing_tools:
         missing_str = ", ".join(missing_tools)
-        print(f"Overall Status: ATTENTION REQUIRED (missing tools: {missing_str})")
+        print(f"Overall Status: NOT READY (missing/broken: {missing_str})")
     else:
         print("Overall Status: READY")
-    print("=" * 40 + "\n")
+    print("=" * 45 + "\n")
 
 
 def cmd_install(args: argparse.Namespace) -> None:
