@@ -45,7 +45,10 @@ class ESimToolManagerGUI:
         platform_lbl.pack(side=tk.LEFT, padx=15)
 
         refresh_btn = ttk.Button(header, text="🔄 Refresh", command=self.refresh_status)
-        refresh_btn.pack(side=tk.RIGHT)
+        refresh_btn.pack(side=tk.RIGHT, padx=3)
+
+        esim_btn = ttk.Button(header, text="🚀 Open eSim", command=self.open_esim)
+        esim_btn.pack(side=tk.RIGHT, padx=3)
 
         # Status Summary Frame
         self.status_bar = ttk.Frame(self.root, padding=(10, 5))
@@ -86,7 +89,6 @@ class ESimToolManagerGUI:
         toolbar = ttk.Frame(self.root, padding=10)
         toolbar.pack(fill=tk.X)
 
-        ttk.Button(toolbar, text="🚀 Open eSim", command=self.open_esim).pack(side=tk.LEFT, padx=3)
         ttk.Button(toolbar, text="🩺 Doctor Diagnostics", command=self.run_doctor).pack(side=tk.LEFT, padx=3)
         self.install_btn = ttk.Button(toolbar, text="📥 Install Selected", command=self.install_selected)
         self.install_btn.pack(side=tk.LEFT, padx=3)
