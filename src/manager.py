@@ -1,6 +1,8 @@
 import argparse
+from pathlib import Path
 
 from detector import KiCadDetector, NgspiceDetector, print_tool
+from installer import NgspiceInstaller
 
 DETECTORS = [
     KiCadDetector(),
@@ -39,6 +41,27 @@ def cmd_check(args: argparse.Namespace) -> None:
     check_all_detailed()
 
 
+def cmd_install(args: argparse.Namespace) -> None:
+    tool_name = args.tool.lower()
+    if tool_name != "ngspice":
+        print(f"Tool '{args.tool}' is not currently supported for installation.")
+        return
+
+    print("Installing Ngspice...\n")
+    archive_path = Path("downloads/ngspice-47_64.7z")
+    installer = NgspiceInstaller(archive_path)
+    success = installer.install()
+
+    if not success:
+        print("\nInstallation failed.")
+        return
+
+    print("\nInstallation completed. Verifying installation...\n")
+    detector = NgspiceDetector()
+    info = detector.detect()
+    print_tool(info)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="esim-manager",
@@ -51,6 +74,10 @@ def main() -> None:
 
     check_parser = subparsers.add_parser("check", help="Perform detection checks and report tool status.")
     check_parser.set_defaults(func=cmd_check)
+
+    install_parser = subparsers.add_parser("install", help="Install a tool.")
+    install_parser.add_argument("tool", help="Name of the tool to install (e.g. ngspice)")
+    install_parser.set_defaults(func=cmd_install)
 
     args = parser.parse_args()
 
