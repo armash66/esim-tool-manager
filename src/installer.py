@@ -86,19 +86,18 @@ class VerilatorInstaller:
     def install(self) -> bool:
         logger.info("Starting Verilator installation check...")
         if sys.platform == "win32":
-            # Check if choco is available as fallback for Windows Verilator
-            choco = shutil.which("choco")
-            if choco:
-                cmd = [choco, "install", "verilator", "-y"]
+            pacman = Path("C:/msys64/usr/bin/pacman.exe")
+            if pacman.is_file():
+                cmd = [str(pacman), "-S", "--noconfirm", "mingw-w64-x86_64-verilator"]
             else:
-                msg = "Verilator on Windows is provided via MSYS2 / Linux WSL / Chocolatey. Run on Linux or install via MSYS2/Chocolatey."
+                msg = "Verilator installation on Windows requires MSYS2 (pacman not found at C:\\msys64\\usr\\bin\\pacman.exe). Please install MSYS2 or run on Linux."
                 print(msg)
-                logger.info(msg)
+                logger.error(msg)
                 return False
         else:
             cmd = ["sudo", "apt-get", "install", "-y", "verilator"]
 
-        print(f"Installing Verilator using {'Chocolatey' if sys.platform == 'win32' else 'apt'}...")
+        print(f"Installing Verilator using {'MSYS2 pacman' if sys.platform == 'win32' else 'apt'}...")
         try:
             result = subprocess.run(cmd, text=True)
             if result.returncode not in (0, 2316632107, -1978238933):

@@ -26,7 +26,7 @@ def test_ghdl_installer_winget_missing(monkeypatch):
     assert installer.install() is False
 
 
-def test_verilator_installer_winget_missing(monkeypatch):
-    monkeypatch.setattr("installer.find_winget", lambda: None)
+def test_verilator_installer_missing(monkeypatch):
+    monkeypatch.setattr("pathlib.Path.is_file", lambda self: False)
     installer = VerilatorInstaller()
     assert installer.install() is False

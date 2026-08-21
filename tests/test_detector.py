@@ -49,6 +49,7 @@ def test_ghdl_detector_missing(monkeypatch, tmp_path):
 
 def test_verilator_detector_missing(monkeypatch, tmp_path):
     monkeypatch.setattr("shutil.which", lambda name: None)
+    monkeypatch.setattr("pathlib.Path.is_file", lambda self: False)
     fake_home = tmp_path / "user"
     monkeypatch.setattr("pathlib.Path.home", lambda: fake_home)
 
