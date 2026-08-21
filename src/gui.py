@@ -86,12 +86,16 @@ class ESimToolManagerGUI:
         toolbar = ttk.Frame(self.root, padding=10)
         toolbar.pack(fill=tk.X)
 
-        ttk.Button(toolbar, text="🩺 Doctor Diagnostics", command=self.run_doctor).pack(side=tk.LEFT, padx=5)
-        self.install_btn = ttk.Button(toolbar, text="📥 Install Selected Tool", command=self.install_selected)
-        self.install_btn.pack(side=tk.LEFT, padx=5)
-        ttk.Button(toolbar, text="🔄 Check Updates", command=self.check_updates).pack(side=tk.LEFT, padx=5)
-        ttk.Button(toolbar, text="🌐 Path Environment", command=self.show_path_env).pack(side=tk.LEFT, padx=5)
-        ttk.Button(toolbar, text="⚙️ Configuration", command=self.show_config).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(toolbar, text="🩺 Doctor Diagnostics", command=self.run_doctor).pack(side=tk.LEFT, padx=3)
+        self.install_btn = ttk.Button(toolbar, text="📥 Install Selected", command=self.install_selected)
+        self.install_btn.pack(side=tk.LEFT, padx=3)
+        self.uninstall_btn = ttk.Button(toolbar, text="🗑️ Uninstall Selected", command=self.uninstall_selected)
+        self.uninstall_btn.pack(side=tk.LEFT, padx=3)
+        self.uninstall_all_btn = ttk.Button(toolbar, text="🧹 Uninstall All", command=self.uninstall_all)
+        self.uninstall_all_btn.pack(side=tk.LEFT, padx=3)
+        ttk.Button(toolbar, text="🔄 Check Updates", command=self.check_updates).pack(side=tk.LEFT, padx=3)
+        ttk.Button(toolbar, text="🌐 Path Env", command=self.show_path_env).pack(side=tk.LEFT, padx=3)
+        ttk.Button(toolbar, text="⚙️ Config", command=self.show_config).pack(side=tk.RIGHT, padx=3)
 
         # Activity Output Log Window
         log_frame = ttk.LabelFrame(self.root, text="Activity Log", padding=10)
@@ -198,6 +202,62 @@ class ESimToolManagerGUI:
                 self.root.after(0, lambda: self.install_btn.config(state=tk.NORMAL))
 
         threading.Thread(target=_do_install, daemon=True).start()
+
+    def uninstall_selected(self):
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("Selection Required", "Please select a tool from the table first.")
+            return
+
+        raw_val = str(self.tree.item(selected[0])["values"][0]).strip()
+        tool_name = raw_val.lower()
+        installer = get_installer(tool_name)
+        if not installer or not hasattr(installer, "uninstall"):
+            messagebox.showinfo("Unmanaged Tool", f"Uninstallation workflow for {raw_val} is not managed.")
+            return
+
+        if not messagebox.askyesno("Confirm Uninstall", f"Are you sure you want to uninstall {raw_val}?"):
+            return
+
+        self.uninstall_btn.config(state=tk.DISABLED)
+        self.log(f"Starting uninstallation for {raw_val}...")
+
+        def _do_uninstall():
+            try:
+                success = installer.uninstall()
+                if success:
+                    self.log(f"Uninstallation of {raw_val} completed successfully.")
+                    self.root.after(0, lambda: messagebox.showinfo("Uninstall Complete", f"{raw_val} uninstalled successfully."))
+                    self.root.after(0, self.refresh_status)
+                else:
+                    self.log(f"Uninstallation of {raw_val} failed.")
+                    self.root.after(0, lambda: messagebox.showerror("Uninstall Failed", f"Uninstallation of {raw_val} failed. Check log for details."))
+            finally:
+                self.root.after(0, lambda: self.uninstall_btn.config(state=tk.NORMAL))
+
+        threading.Thread(target=_do_uninstall, daemon=True).start()
+
+    def uninstall_all(self):
+        if not messagebox.askyesno("Confirm Uninstall All", "Are you sure you want to uninstall all managed tools?"):
+            return
+
+        self.uninstall_all_btn.config(state=tk.DISABLED)
+        self.log("Starting uninstallation for all managed tools...")
+
+        def _do_uninstall_all():
+            try:
+                for tool_name, info in TOOLS.items():
+                    installer = get_installer(tool_name)
+                    if installer and hasattr(installer, "uninstall"):
+                        self.log(f"Uninstalling {info['name']}...")
+                        installer.uninstall()
+                self.log("All managed tools uninstallation completed.")
+                self.root.after(0, lambda: messagebox.showinfo("Uninstall All Complete", "All managed tools uninstalled."))
+                self.root.after(0, self.refresh_status)
+            finally:
+                self.root.after(0, lambda: self.uninstall_all_btn.config(state=tk.NORMAL))
+
+        threading.Thread(target=_do_uninstall_all, daemon=True).start()
 
     def check_updates(self):
         self.log("Checking updates for managed tools...")

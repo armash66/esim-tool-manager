@@ -18,6 +18,22 @@ def cmd_gui(args: argparse.Namespace) -> None:
     launch_gui()
 
 
+def cmd_uninstall(args: argparse.Namespace) -> None:
+    tool_name = args.tool.lower()
+    logger.info(f"Command executed: uninstall {tool_name}")
+    installer = get_installer(tool_name)
+    if not installer or not hasattr(installer, "uninstall"):
+        print(f"No uninstaller available for '{tool_name}'.")
+        return
+
+    print(f"Uninstalling {tool_name}...")
+    success = installer.uninstall()
+    if success:
+        print(f"Successfully uninstalled {tool_name}.")
+    else:
+        print(f"Failed to uninstall {tool_name}.")
+
+
 def cmd_env(args: argparse.Namespace) -> None:
     logger.info("Command executed: env")
     checker = DependencyChecker()
@@ -244,9 +260,13 @@ def main() -> None:
     update_parser.add_argument("tool", nargs="?", help="Optional tool name to update")
     update_parser.set_defaults(func=cmd_update)
 
-    install_parser = subparsers.add_parser("install", help="Install a tool.")
-    install_parser.add_argument("tool", help="Name of the tool to install (e.g. kicad, ngspice)")
+    install_parser = subparsers.add_parser("install", help="Install a managed tool.")
+    install_parser.add_argument("tool", help="Name of the tool to install")
     install_parser.set_defaults(func=cmd_install)
+
+    uninstall_parser = subparsers.add_parser("uninstall", help="Uninstall a managed tool.")
+    uninstall_parser.add_argument("tool", help="Name of the tool to uninstall")
+    uninstall_parser.set_defaults(func=cmd_uninstall)
 
     args = parser.parse_args()
 

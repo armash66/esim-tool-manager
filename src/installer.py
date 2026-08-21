@@ -41,13 +41,36 @@ class KiCadInstaller:
 
         try:
             result = subprocess.run(cmd, text=True)
-            # 0 = success, 2316632107 / 0x8A15002B = already installed & no upgrade available
             logger.info(f"KiCad WinGet installation finished successfully (code {result.returncode}).")
             return True
         except Exception as e:
             msg = f"Error running WinGet: {e}"
             print(msg)
             logger.error(msg)
+            return False
+
+    def uninstall(self) -> bool:
+        logger.info("Starting KiCad uninstallation via WinGet...")
+        winget = find_winget()
+        if not winget:
+            logger.error("WinGet not found for KiCad uninstall.")
+            return False
+
+        cmd = [winget, "uninstall", "--id", "KiCad.KiCad", "--exact", "--accept-source-agreements"]
+        print("Uninstalling KiCad via WinGet...")
+        try:
+            result = subprocess.run(cmd, text=True)
+            from detector import KiCadDetector
+            detector = KiCadDetector()
+            info = detector.detect()
+            if not info.installed:
+                logger.info("KiCad uninstalled and verified successfully.")
+                return True
+            else:
+                logger.warning(f"WinGet finished (code {result.returncode}), but KiCad executable was still detected.")
+                return not info.installed
+        except Exception as e:
+            logger.error(f"Error uninstalling KiCad: {e}")
             return False
 
 
@@ -81,6 +104,26 @@ class GhdlInstaller:
             logger.error(msg)
             return False
 
+    def uninstall(self) -> bool:
+        logger.info("Starting GHDL uninstallation...")
+        if sys.platform == "win32":
+            winget = find_winget()
+            if not winget:
+                return False
+            cmd = [winget, "uninstall", "--id", "ghdl.ghdl.ucrt64.mcode", "--exact", "--accept-source-agreements"]
+        else:
+            cmd = ["sudo", "apt-get", "remove", "-y", "ghdl"]
+
+        print(f"Uninstalling GHDL using {'WinGet' if sys.platform == 'win32' else 'apt'}...")
+        try:
+            subprocess.run(cmd, text=True)
+            from detector import GhdlDetector
+            info = GhdlDetector().detect()
+            return not info.installed
+        except Exception as e:
+            logger.error(f"Error uninstalling GHDL: {e}")
+            return False
+
 
 class VerilatorInstaller:
     def install(self) -> bool:
@@ -111,6 +154,27 @@ class VerilatorInstaller:
             msg = f"Error installing Verilator: {e}"
             print(msg)
             logger.error(msg)
+            return False
+
+    def uninstall(self) -> bool:
+        logger.info("Starting Verilator uninstallation...")
+        if sys.platform == "win32":
+            pacman = Path("C:/msys64/usr/bin/pacman.exe")
+            if pacman.is_file():
+                cmd = [str(pacman), "-R", "--noconfirm", "mingw-w64-x86_64-verilator"]
+            else:
+                return False
+        else:
+            cmd = ["sudo", "apt-get", "remove", "-y", "verilator"]
+
+        print(f"Uninstalling Verilator using {'MSYS2 pacman' if sys.platform == 'win32' else 'apt'}...")
+        try:
+            subprocess.run(cmd, text=True)
+            from detector import VerilatorDetector
+            info = VerilatorDetector().detect()
+            return not info.installed
+        except Exception as e:
+            logger.error(f"Error uninstalling Verilator: {e}")
             return False
 
 
@@ -179,6 +243,14 @@ class NgspiceInstaller:
         print(f"Installed and activated Ngspice {version}.")
         print(f"Metadata written to {metadata_path}.")
         logger.info(msg)
+        return True
+
+    def uninstall(self) -> bool:
+        logger.info(f"Uninstalling Ngspice from {self.install_dir}...")
+        if self.install_dir.exists():
+            shutil.rmtree(self.install_dir)
+            logger.info("Ngspice directory removed successfully.")
+            return True
         return True
 
     def safe_upgrade(self, new_archive: Path) -> bool:

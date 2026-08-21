@@ -30,3 +30,18 @@ def test_verilator_installer_missing(monkeypatch):
     monkeypatch.setattr("pathlib.Path.is_file", lambda self: False)
     installer = VerilatorInstaller()
     assert installer.install() is False
+
+
+def test_kicad_uninstall_winget_missing(monkeypatch):
+    monkeypatch.setattr("installer.find_winget", lambda: None)
+    installer = KiCadInstaller()
+    assert installer.uninstall() is False
+
+
+def test_ngspice_uninstall(tmp_path, monkeypatch):
+    install_dir = tmp_path / "ngspice"
+    install_dir.mkdir(parents=True, exist_ok=True)
+    installer = NgspiceInstaller(tmp_path / "fake.7z")
+    installer.install_dir = install_dir
+    assert installer.uninstall() is True
+    assert not install_dir.exists()
