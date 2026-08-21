@@ -10,6 +10,8 @@ from registry import get_all_detectors, get_detector, get_installer, get_updater
 logger = get_logger()
 
 
+import sys
+
 def cmd_env(args: argparse.Namespace) -> None:
     logger.info("Command executed: env")
     checker = DependencyChecker()
@@ -24,13 +26,17 @@ def cmd_env(args: argparse.Namespace) -> None:
             status_str = "ON PATH" if status.is_on_path else "MISSING FROM PATH"
             print(f"{status.name}: {parent_dir} [{status_str}]")
 
-    print("\nTo configure PATH in PowerShell:")
-    ps_path = ";".join(bin_paths)
-    print(f'  $env:Path += ";{ps_path}"')
-
-    print("\nTo configure PATH in Bash / Linux:")
-    bash_path = ":".join(bin_paths)
-    print(f'  export PATH="$PATH:{bash_path}"\n')
+    print("\nEnvironment PATH Configuration Instructions:")
+    if sys.platform == "win32":
+        ps_path = ";".join(bin_paths)
+        print("  PowerShell:")
+        print(f'    $env:Path += ";{ps_path}"')
+        print("  Command Prompt:")
+        print(f'    set PATH=%PATH%;{ps_path}\n')
+    else:
+        bash_path = ":".join(bin_paths)
+        print("  POSIX Shell (Bash/Zsh):")
+        print(f'    export PATH="$PATH:{bash_path}"\n')
 
 
 def cmd_config(args: argparse.Namespace) -> None:
@@ -130,9 +136,12 @@ def cmd_doctor(args: argparse.Namespace) -> None:
     checker = DependencyChecker()
     report = checker.check_all()
 
-    print("Core Tools")
-    missing_tools = []
-    for tool_name, status in report["tools"].items():
+    print("Core Managed Tools")
+    core_missing = []
+    for tool_name in ("kicad", "ngspice"):
+        status = report["tools"].get(tool_name)
+        if not status:
+            continue
         print(f"\n{status.name}")
         if status.state == DependencyState.INSTALLED:
             print("  [+] Installed")
@@ -145,14 +154,25 @@ def cmd_doctor(args: argparse.Namespace) -> None:
         elif status.state == DependencyState.BROKEN:
             print("  [!] Broken Installation")
             print(f"  [!] {status.message}")
-            missing_tools.append(status.name)
+            core_missing.append(status.name)
             logger.warning(f"Doctor check: {status.name} BROKEN")
         elif status.state == DependencyState.NOT_INSTALLED:
             print("  [-] Not installed")
-            missing_tools.append(status.name)
+            core_missing.append(status.name)
             logger.info(f"Doctor check: {status.name} NOT INSTALLED")
-        elif status.state == DependencyState.UNAVAILABLE:
-            print("  [o] Detection unavailable")
+
+    print("\nRegistered Tools (Installation Unmanaged)")
+    for tool_name in ("ghdl", "verilator"):
+        status = report["tools"].get(tool_name)
+        if not status:
+            continue
+        print(f"\n{status.name}")
+        if status.state == DependencyState.INSTALLED:
+            print("  [+] Installed")
+            ver_str = status.version if status.version is not None else "(unavailable)"
+            print(f"  [+] Version: {ver_str}")
+        else:
+            print("  [o] Detection / Installation not managed")
 
     print("\nConfiguration")
     env = report["environment"]
@@ -165,13 +185,13 @@ def cmd_doctor(args: argparse.Namespace) -> None:
         print("  [+] Configuration valid")
 
     print("\n" + "=" * 45)
-    if missing_tools:
-        missing_str = ", ".join(missing_tools)
-        msg = f"Overall Status: NOT READY (missing/broken: {missing_str})"
+    if core_missing:
+        missing_str = ", ".join(core_missing)
+        msg = f"Overall Core Environment Status: NOT READY (missing/broken: {missing_str})"
         print(msg)
         logger.warning(msg)
     else:
-        msg = "Overall Status: READY"
+        msg = "Overall Core Environment Status: READY"
         print(msg)
         logger.info(msg)
     print("=" * 45 + "\n")
