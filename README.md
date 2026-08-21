@@ -1,300 +1,164 @@
 # eSim Tool Manager
 
-A command-line tool for managing external tools and dependencies used by eSim.
+Automated management system for external EDA tools and dependencies required by the eSim simulation workflow.
 
 ## Overview
 
-eSim integrates multiple external tools for schematic design, simulation, HDL processing, and related workflows. Managing these tools manually can involve installation, version verification, configuration, environment setup, and recovery from failed upgrades.
+eSim relies on several open-source EDA tools (KiCad, Ngspice, GHDL, Verilator) for schematic design, circuit simulation, and HDL processing. Manual setup often results in environment misconfigurations, PATH mismatches, broken dependencies, and unverified tool versions.
 
-eSim Tool Manager provides a centralized CLI for detecting, installing, verifying, updating, configuring, and diagnosing managed tools.
-
-The current implementation targets Windows and uses platform-specific installation strategies where required.
+eSim Tool Manager unifies these external tools into a single management layer. It provides dynamic detection, automated installation, semantic update checking, environment health diagnostics, versioned storage, and safe rollback mechanisms accessible through both CLI and Desktop GUI.
 
 ## Features
 
-- Tool detection with executable and version discovery
-- Tool installation through multiple installation strategies
-- Centralized tool registry
-- Versioned installations
-- Candidate verification before activation
-- Automatic rollback on failed upgrades
-- Installed/available version comparison
-- Configuration management
-- Environment and PATH diagnostics
-- Dependency and installation health checks
-- Persistent audit logging
-- Dual Interfaces: Command Line Interface (CLI) and Desktop Graphical User Interface (GUI)
-- Cross-Platform Adapters (Windows & Linux abstraction)
-- Automated unit and integration tests (22 tests)
+| Feature | Implementation Details |
+|---|---|
+| Tool Detection | Discovers executables dynamically on system PATH and platform-standard directories |
+| Installation | Handles multi-strategy installations (WinGet, release archives, package managers) |
+| Version Management | Extracts precise version strings via executable CLI flags and metadata |
+| Safe Upgrade | Stages upgrades as candidate builds and verifies executable integrity before activation |
+| Rollback | Automatically restores prior active version if candidate verification fails |
+| Updates | Compares installed versions against available releases using semantic versioning |
+| Dependency Checks | Evaluates toolchain readiness state (READY vs INCOMPLETE) across all managed tools |
+| Configuration | Persists install paths and system settings in `~/.esim-tools/config.json` |
+| Environment / PATH | Detects PATH status and generates shell-specific export commands (PowerShell, Cmd, Bash) |
+| CLI | Full sub-command interface (`list`, `check`, `doctor`, `install`, `update`, `config`, `env`) |
+| Desktop GUI | Modern Tkinter interface with Activity Log, status indicators, and one-click actions |
+| Logging | Audit logging to `~/.esim-tools/logs/manager.log` and standard output |
+| Platform Support | Platform-adapter architecture supporting Windows and Linux environments |
 
-## Supported Tools
-
-| Tool | Detection | Installation | Updates |
-|------|-----------|--------------|---------|
-| KiCad | Yes | WinGet | Yes |
-| Ngspice | Yes | 7z archive | Yes |
-| GHDL | Yes | WinGet / apt | Yes |
-| Verilator | Yes | WinGet / apt | Yes |
+Managed toolchain: **KiCad · Ngspice · GHDL · Verilator**
 
 ## Architecture
 
 ```text
-                         CLI / Desktop GUI (gui.py)
-                                    |
-                                 Manager
-                                    |
-                               Tool Registry
-                   _________________|_________________
-                  |                 |                 |
-             Detectors         Installers        Updaters
-                  |                 |                 |
-                  +-----------------+-----------------+
-                                    |
-                           Dependency Checker
-                                    |
-                +-------------------+-------------------+
-                |                   |                   |
-          Configuration          Logger          Platform Adapter
-                                              (Windows / Linux)
+                     CLI / Desktop GUI (gui.py)
+                                 |
+                            Tool Registry
+                    _____________|_____________
+                   |             |             |
+              Detectors     Installers     Updaters
+                   |             |             |
+                   +-------------+-------------+
+                                 |
+                         Platform Adapter
+                                 |
+                          Windows / Linux
 ```
 
-The registry provides a common lookup layer for tool-specific detectors, installers, and updaters. Tool implementations remain responsible for platform-specific behavior.
-
-### Installation strategies
-
-KiCad is installed through Windows Package Manager:
-
-```text
-Manager -> KiCad Installer -> WinGet -> KiCad -> Detector
-```
-
-Ngspice is installed from a release archive:
-
-```text
-Manager -> Ngspice Installer -> Archive Extraction
-       -> Candidate Verification -> Activation
-```
-
-### Versioned installation and rollback
-
-Managed Ngspice installations use versioned directories:
-
-```text
-~/.esim-tools/ngspice/
-├── versions/
-│   ├── <version>/
-│   └── ...
-├── active/
-└── metadata.json
-```
-
-Updates are staged as candidates and verified before activation. If verification fails, the previous active installation is restored automatically.
-
-See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the complete design.
+- **Separation of Concerns**: Detection, installation, and update logic are encapsulated into dedicated components for each tool.
+- **Central Registry**: Provides a uniform interface for querying tool metadata, detectors, installers, and updaters.
+- **Platform Adapter**: Decouples OS-specific path resolving and package manager invocations from application logic.
+- **Verification First**: Executable discovery and version checks must succeed before an installation or upgrade is marked valid.
 
 ## Installation
 
-Clone the repository:
-
-```bash
+```powershell
+# Clone repository
 git clone https://github.com/armash66/esim-tool-manager.git
 cd esim-tool-manager
-```
 
-Create a virtual environment:
-
-```bash
+# Create and activate virtual environment
 python -m venv .venv
-```
+.\.venv\Scripts\Activate.ps1
 
-Activate it on Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-Install dependencies:
-
-```bash
-pip install -r requirements.txt
+# Install requirements
+python -m pip install -r requirements.txt
 ```
 
 ## Usage
 
-The manager is operated through the command line.
+### CLI Commands
 
-### Launch Desktop GUI
-```bash
-python src\manager.py gui
-```
-Or directly run `python src\gui.py`.
+| Command | Description |
+|---|---|
+| `python src/manager.py list` | List all managed tools and brief installation status |
+| `python src/manager.py check` | Display detailed tool status including version and executable path |
+| `python src/manager.py doctor` | Run comprehensive health diagnostics on the toolchain |
+| `python src/manager.py install <tool>` | Install a specific tool (`kicad`, `ngspice`, `ghdl`, `verilator`) |
+| `python src/manager.py install all` | Install all missing tools while skipping healthy installations |
+| `python src/manager.py update [tool]` | Check for available updates or trigger upgrade for a tool |
+| `python src/manager.py config` | View or update configuration settings |
+| `python src/manager.py env` | Inspect tool binary paths and print shell PATH export commands |
+| `python src/manager.py gui` | Launch the Desktop GUI application |
 
-### List managed tools
-```bash
-python src\manager.py list
-```
+### Desktop GUI
 
-### Check installed tools
-```bash
-python src\manager.py check
-```
-
-### Diagnose the eSim environment
-```bash
-python src\manager.py doctor
+```powershell
+python src/manager.py gui
 ```
 
-The diagnostic command checks tool availability, installation state, versions, managed directories, and PATH configuration.
+## Managed Tools
 
-### Install a tool
-```bash
-python src\manager.py install ngspice
-python src\manager.py install kicad
-```
+| Tool | Category | Detection Strategy | Installation Strategy | Update Checking |
+|---|---|---|---|---|
+| **KiCad** | Core EDA | Executable CLI / `%LOCALAPPDATA%` & `%ProgramFiles%` discovery | WinGet (`--scope user --force`) | WinGet package query |
+| **Ngspice** | Circuit Simulator | Executable CLI / metadata / PATH | Versioned 7z release archive | Local release comparison |
+| **GHDL** | VHDL Simulator | Executable CLI / system PATH | WinGet / `apt` | WinGet package query |
+| **Verilator** | Verilog Simulator | Executable CLI / MSYS2 `mingw64` discovery | MSYS2 `pacman` / `apt` | WinGet / `pacman -Si` query |
 
-### Check for updates
-```bash
-python src\manager.py update
-```
+## Versioning and Rollback
 
-Update a specific tool:
-
-```bash
-python src\manager.py update ngspice
-```
-
-### Manage configuration
-```bash
-python src\manager.py config
-```
-
-Set a configuration value:
-
-```bash
-python src\manager.py config --set auto_update true
-```
-
-Configuration is stored at: `~/.esim-tools/config.json`
-
-### Environment configuration
-```bash
-python src\manager.py env
-```
-
-This reports the environment configuration required by the managed tools and can generate shell-specific PATH configuration.
-
-## Runtime Data
-
-The manager stores user-specific state outside the repository:
+Managed tools supporting versioned installations (e.g., Ngspice) are organized in isolated directories:
 
 ```text
-~/.esim-tools/
-├── config.json
-├── logs/
-│   └── manager.log
-└── ngspice/
-    ├── versions/
-    ├── active/
-    └── metadata.json
+~/.esim-tools/ngspice/
+├── versions/
+│   ├── 47/
+│   └── 48/
+├── active -> versions/47/
+└── metadata.json
 ```
 
-This keeps installation state, configuration, and logs separate from the application source code.
+1. **Candidate Staging**: New release versions are extracted into an isolated directory under `versions/<version>/`.
+2. **Verification**: Executable presence and version output are verified prior to activation.
+3. **Atomic Swap**: Upon successful verification, the `active` pointer and metadata are updated to the candidate build.
+4. **Rollback**: If candidate verification fails, the installer aborts and retains the existing active installation intact.
 
 ## Testing
 
-The project uses pytest for automated testing.
+Run the automated test suite with pytest:
 
-Run the complete test suite:
-
-```bash
-pytest
+```powershell
+pytest -v
 ```
 
-Current test suite: **45 passed**
+Current test suite: **49 passed**
 
-Tests cover:
-- Tool detection
-- Installation behavior
-- Metadata handling
-- Registry operations
-- Dependency states
-- Configuration handling
-- CLI commands
-- Upgrade and rollback behavior
+Tests cover tool detection, multi-strategy installation, metadata persistence, registry wiring, dependency health states, configuration, CLI subcommands, GUI wiring, version comparison, and safe upgrade/rollback logic.
 
-Tests are isolated from the developer's installed toolchain and do not require the actual KiCad or Ngspice installations to execute.
+## Documentation
+
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Component design, data flows, and subsystem architecture
+- [USER_GUIDE.md](docs/USER_GUIDE.md) - Detailed operating guide for CLI commands and Desktop GUI
+- [REQUIREMENTS.md](docs/REQUIREMENTS.md) - Mapping of implementation against technical requirements
 
 ## Project Structure
 
 ```text
 esim-tool-manager/
 ├── src/
-│   ├── manager.py
-│   ├── registry.py
-│   ├── detector.py
-│   ├── installer.py
-│   ├── updater.py
-│   ├── dependency.py
-│   ├── config.py
-│   └── logger.py
-├── tests/
-│   ├── test_cli.py
-│   ├── test_config.py
-│   ├── test_dependency.py
-│   ├── test_detector.py
-│   ├── test_installer.py
-│   ├── test_registry.py
-│   └── test_rollback.py
-├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── USER_GUIDE.md
-│   └── REQUIREMENTS.md
-├── README.md
-├── LICENSE
-├── requirements.txt
-└── .gitignore
+│   ├── manager.py          # CLI entry point and subcommand handlers
+│   ├── gui.py              # Tkinter Desktop GUI interface
+│   ├── registry.py         # Central tool registry
+│   ├── detector.py         # Tool detection logic
+│   ├── installer.py        # Installation workflows
+│   ├── updater.py          # Version comparison and update handlers
+│   ├── dependency.py       # Dependency health checker
+│   ├── config.py           # Configuration management
+│   ├── platform_adapter.py # OS abstraction layer (Windows/Linux)
+│   └── logger.py           # Persistent audit logging
+├── tests/                  # Automated pytest test suite
+├── docs/                   # System documentation
+├── requirements.txt        # Python dependencies
+├── README.md               # Repository overview
+└── LICENSE                 # License file
 ```
 
-## Design Principles
+## Platform Support
 
-### Separation of responsibilities
-Detection, installation, updating, configuration, dependency checking, and logging are implemented as separate components.
-
-### Verification before activation
-An installation is not considered valid merely because extraction or package installation completed. The resulting executable is detected and verified before being activated.
-
-### Tool-specific installation strategies
-The manager does not assume that every dependency is installed the same way. Installers encapsulate the mechanism required by each tool.
-
-### No machine-specific paths
-User and installation paths are resolved at runtime. The source code does not depend on developer-specific absolute paths.
-
-## Requirements Coverage
-
-| Task 5 requirement | Implementation |
-|---|---|
-| Tool installation | KiCad/WinGet, Ngspice/archive |
-| Version management | Detection, metadata, versioned installations |
-| Updates | Version comparison and update command |
-| Configuration | config.json and CLI configuration |
-| Path management | Environment diagnostics and shell configuration |
-| Dependency checking | DependencyChecker and doctor |
-| User interface | CLI |
-| Installed/version information | list and check |
-| Action logging | Persistent audit log |
-| Package manager integration | WinGet |
-| Safe upgrade | Candidate installation and verification |
-| Rollback | Automatic restoration of previous version |
-| Automated testing | 19 pytest tests |
-
-See [REQUIREMENTS.md](docs/REQUIREMENTS.md) for the detailed mapping.
-
-## Documentation
-
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- [USER_GUIDE.md](docs/USER_GUIDE.md)
-- [REQUIREMENTS.md](docs/REQUIREMENTS.md)
+- **Windows**: Primary target environment. Verified on Windows 10/11 using WinGet, MSYS2, PowerShell, and native binary distributions.
+- **Linux**: Supported via `LinuxAdapter` abstraction using system package managers (`apt`, `dnf`, `pacman`).
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE).
+MIT License. See [LICENSE](LICENSE) for details.

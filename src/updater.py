@@ -1,4 +1,6 @@
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 from detector import KiCadDetector, NgspiceDetector
 from installer import find_winget, KiCadInstaller, NgspiceInstaller
@@ -154,8 +156,20 @@ class VerilatorUpdater:
         # Check MSYS2 pacman or winget or fallback
         latest = get_winget_latest_version("verilator.verilator")
         if not latest:
-            # Fallback check via pacman if msys2 exists
+            # Platform-aware pacman discovery
             pacman = shutil.which("pacman")
+            if not pacman and sys.platform == "win32":
+                candidates = [
+                    Path("C:/msys64/usr/bin/pacman.exe"),
+                    Path("C:/msys64/bin/pacman.exe"),
+                    Path("C:/msys32/usr/bin/pacman.exe"),
+                    Path.home() / "msys64" / "usr" / "bin" / "pacman.exe",
+                ]
+                for candidate in candidates:
+                    if candidate.is_file():
+                        pacman = str(candidate)
+                        break
+
             if pacman:
                 try:
                     res = subprocess.run([pacman, "-Si", "mingw-w64-x86_64-verilator"], capture_output=True, text=True, timeout=10)
