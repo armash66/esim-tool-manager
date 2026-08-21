@@ -1,68 +1,75 @@
 import shutil
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from packaging.version import Version, InvalidVersion
 
-# --- KiCad ---
 
-path = shutil.which("kicad-cli")
+@dataclass
+class ToolInfo:
+    name: str
+    installed: bool
+    path: str | None
+    version: str | None
 
-if path is None:
-    base = Path(r"C:\Program Files\KiCad")
-    if base.is_dir():
-        version_folders = []
-        for folder in base.iterdir():
-            try:
-                ver = Version(folder.name)
-                version_folders.append((ver, folder))
-            except InvalidVersion:
-                pass
 
-        version_folders.sort(reverse=True)
+class KiCadDetector:
+    def detect(self) -> ToolInfo:
+        path = shutil.which("kicad-cli")
 
-        for ver, folder in version_folders:
-            candidate = folder / "bin" / "kicad-cli.exe"
-            if candidate.is_file():
-                path = str(candidate)
-                break
+        if path is None:
+            base = Path(r"C:\Program Files\KiCad")
+            if base.is_dir():
+                version_folders = []
+                for folder in base.iterdir():
+                    try:
+                        ver = Version(folder.name)
+                        version_folders.append((ver, folder))
+                    except InvalidVersion:
+                        pass
 
-if path is None:
-    print("KiCad")
-    print("Installed: No")
-else:
-    result = subprocess.run([path, "--version"], capture_output=True, text=True)
+                version_folders.sort(reverse=True)
 
-    print("KiCad")
-    print("Installed: Yes")
-    print("Path:     ", path)
+                for ver, folder in version_folders:
+                    candidate = folder / "bin" / "kicad-cli.exe"
+                    if candidate.is_file():
+                        path = str(candidate)
+                        break
 
-    if result.returncode == 0:
-        print("Version:  ", result.stdout.strip())
-    else:
-        print("Version:   (command failed, returncode:", result.returncode, ")")
+        if path is None:
+            return ToolInfo(name="KiCad", installed=False, path=None, version=None)
 
-print()
+        result = subprocess.run([path, "--version"], capture_output=True, text=True)
+        version = result.stdout.strip() if result.returncode == 0 else None
+        return ToolInfo(name="KiCad", installed=True, path=path, version=version)
 
-# --- Ngspice ---
 
-path = shutil.which("ngspice")
+class NgspiceDetector:
+    def detect(self) -> ToolInfo:
+        path = shutil.which("ngspice")
 
-if path is None:
-    fallback = Path.home() / ".esim-tools" / "ngspice" / "Spice64" / "bin" / "ngspice.exe"
-    if fallback.is_file():
-        path = str(fallback)
+        if path is None:
+            fallback = Path.home() / ".esim-tools" / "ngspice" / "Spice64" / "bin" / "ngspice.exe"
+            if fallback.is_file():
+                path = str(fallback)
 
-if path is None:
-    print("Ngspice")
-    print("Installed: No")
-else:
-    result = subprocess.run([path, "--version"], capture_output=True, text=True)
+        if path is None:
+            return ToolInfo(name="Ngspice", installed=False, path=None, version=None)
 
-    print("Ngspice")
-    print("Installed: Yes")
-    print("Path:     ", path)
+        # Don't execute ngspice.exe — it launches a GUI and produces no piped output.
+        # Version will be read from metadata.json written by the installer.
+        return ToolInfo(name="Ngspice", installed=True, path=path, version=None)
 
-    if result.returncode == 0:
-        print("Version:  ", result.stdout.strip())
-    else:
-        print("Version:   (command failed, returncode:", result.returncode, ")")
+
+def print_tool(info: ToolInfo) -> None:
+    print(info.name)
+    print("Installed:", "Yes" if info.installed else "No")
+    if info.installed:
+        print("Path:     ", info.path)
+        print("Version:  ", info.version if info.version is not None else "(unavailable)")
+
+
+if __name__ == "__main__":
+    for detector in [KiCadDetector(), NgspiceDetector()]:
+        print_tool(detector.detect())
+        print()
