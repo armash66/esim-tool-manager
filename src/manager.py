@@ -1,13 +1,7 @@
 import argparse
-from pathlib import Path
 
-from detector import KiCadDetector, NgspiceDetector, print_tool
-from installer import KiCadInstaller, NgspiceInstaller
-
-DETECTORS = [
-    KiCadDetector(),
-    NgspiceDetector(),
-]
+from detector import print_tool
+from registry import get_all_detectors, get_detector, get_installer, list_tools
 
 
 def format_tool_check(info) -> None:
@@ -21,14 +15,14 @@ def format_tool_check(info) -> None:
 
 
 def check_all() -> None:
-    for detector in DETECTORS:
+    for detector in get_all_detectors():
         print_tool(detector.detect())
         print()
 
 
 def check_all_detailed() -> None:
     print("eSim Tool Manager Status Check")
-    for detector in DETECTORS:
+    for detector in get_all_detectors():
         format_tool_check(detector.detect())
     print()
 
@@ -43,16 +37,12 @@ def cmd_check(args: argparse.Namespace) -> None:
 
 def cmd_install(args: argparse.Namespace) -> None:
     tool_name = args.tool.lower()
+    installer = get_installer(tool_name)
+    detector = get_detector(tool_name)
 
-    if tool_name == "kicad":
-        installer = KiCadInstaller()
-        detector = KiCadDetector()
-    elif tool_name == "ngspice":
-        archive_path = Path("downloads/ngspice-47_64.7z")
-        installer = NgspiceInstaller(archive_path)
-        detector = NgspiceDetector()
-    else:
-        print(f"Tool '{args.tool}' is not currently supported for installation.")
+    if not installer or not detector:
+        supported = ", ".join(list_tools())
+        print(f"Tool '{args.tool}' is not supported. Supported tools: {supported}")
         return
 
     print(f"Installing {args.tool}...\n")
@@ -81,7 +71,7 @@ def main() -> None:
     check_parser.set_defaults(func=cmd_check)
 
     install_parser = subparsers.add_parser("install", help="Install a tool.")
-    install_parser.add_argument("tool", help="Name of the tool to install (e.g. ngspice)")
+    install_parser.add_argument("tool", help="Name of the tool to install (e.g. kicad, ngspice)")
     install_parser.set_defaults(func=cmd_install)
 
     args = parser.parse_args()
