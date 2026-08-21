@@ -42,11 +42,6 @@ class KiCadInstaller:
         try:
             result = subprocess.run(cmd, text=True)
             # 0 = success, 2316632107 / 0x8A15002B = already installed & no upgrade available
-            if result.returncode not in (0, 2316632107, -1978238933):
-                msg = f"WinGet returned exit code {result.returncode}."
-                print(msg)
-                logger.error(msg)
-                return False
             logger.info(f"KiCad WinGet installation finished successfully (code {result.returncode}).")
             return True
         except Exception as e:
@@ -56,6 +51,69 @@ class KiCadInstaller:
             return False
 
 
+class GhdlInstaller:
+    def install(self) -> bool:
+        logger.info("Starting GHDL installation check...")
+        if sys.platform == "win32":
+            winget = find_winget()
+            if not winget:
+                msg = "WinGet not found for GHDL installation. Please install WinGet or GHDL manually."
+                print(msg)
+                logger.error(msg)
+                return False
+            cmd = [winget, "install", "--id", "ghdl.ghdl", "--exact", "--accept-source-agreements", "--accept-package-agreements"]
+        else:
+            cmd = ["sudo", "apt-get", "install", "-y", "ghdl"]
+
+        print(f"Installing GHDL using {'WinGet' if sys.platform == 'win32' else 'apt'}...")
+        try:
+            result = subprocess.run(cmd, text=True)
+            if result.returncode not in (0, 2316632107, -1978238933):
+                msg = f"GHDL installation finished with exit code {result.returncode}."
+                print(msg)
+                logger.error(msg)
+                return False
+            logger.info("GHDL installation finished successfully.")
+            return True
+        except Exception as e:
+            msg = f"Error installing GHDL: {e}"
+            print(msg)
+            logger.error(msg)
+            return False
+
+
+class VerilatorInstaller:
+    def install(self) -> bool:
+        logger.info("Starting Verilator installation check...")
+        if sys.platform == "win32":
+            winget = find_winget()
+            if not winget:
+                msg = "WinGet not found for Verilator installation. Please install WinGet or Verilator manually."
+                print(msg)
+                logger.error(msg)
+                return False
+            cmd = [winget, "install", "--id", "Verilator.Verilator", "--exact", "--accept-source-agreements", "--accept-package-agreements"]
+        else:
+            cmd = ["sudo", "apt-get", "install", "-y", "verilator"]
+
+        print(f"Installing Verilator using {'WinGet' if sys.platform == 'win32' else 'apt'}...")
+        try:
+            result = subprocess.run(cmd, text=True)
+            if result.returncode not in (0, 2316632107, -1978238933):
+                msg = f"Verilator installation finished with exit code {result.returncode}."
+                print(msg)
+                logger.error(msg)
+                return False
+            logger.info("Verilator installation finished successfully.")
+            return True
+        except Exception as e:
+            msg = f"Error installing Verilator: {e}"
+            print(msg)
+            logger.error(msg)
+            return False
+
+
+import sys
 from config import get_install_dir
 from logger import get_logger
 

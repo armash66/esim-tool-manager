@@ -33,10 +33,8 @@ The current implementation targets Windows and uses platform-specific installati
 |------|-----------|--------------|---------|
 | KiCad | Yes | WinGet | Yes |
 | Ngspice | Yes | 7z archive | Yes |
-| GHDL | Yes | — | — |
-| Verilator | Yes | — | — |
-
-GHDL and Verilator are currently registered and detectable, while their installation/update workflows are not implemented.
+| GHDL | Yes | WinGet / apt | Yes |
+| Verilator | Yes | WinGet / apt | Yes |
 
 ## Architecture
 
@@ -212,7 +210,7 @@ Run the complete test suite:
 pytest
 ```
 
-Current test suite: **22 passed**
+Current test suite: **24 passed**
 
 Tests cover:
 - Tool detection

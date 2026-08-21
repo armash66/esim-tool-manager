@@ -1,6 +1,6 @@
 from pathlib import Path
 from detector import GhdlDetector, KiCadDetector, NgspiceDetector, VerilatorDetector
-from installer import KiCadInstaller, NgspiceInstaller
+from installer import GhdlInstaller, KiCadInstaller, NgspiceInstaller, VerilatorInstaller
 from updater import KiCadUpdater, NgspiceUpdater
 
 
@@ -28,14 +28,14 @@ TOOLS = {
         "name": "GHDL",
         "category": "core-tool",
         "detector": GhdlDetector,
-        "installer": None,
+        "installer": GhdlInstaller,
         "updater": None,
     },
     "verilator": {
         "name": "Verilator",
         "category": "core-tool",
         "detector": VerilatorDetector,
-        "installer": None,
+        "installer": VerilatorInstaller,
         "updater": None,
     },
 }
