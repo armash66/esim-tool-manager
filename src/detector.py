@@ -79,7 +79,19 @@ class GhdlDetector:
         path = shutil.which("ghdl")
 
         if path is None:
-            fallback = Path.home() / ".esim-tools" / "ghdl" / "bin" / "ghdl.exe"
+            winget_pkg_dir = Path.home() / "AppData" / "Local" / "Microsoft" / "WinGet" / "Packages"
+            if winget_pkg_dir.is_dir():
+                matches = list(winget_pkg_dir.glob("ghdl*/**/ghdl.exe"))
+                if matches:
+                    path = str(matches[0])
+
+        if path is None:
+            winget_link = Path.home() / "AppData" / "Local" / "Microsoft" / "WinGet" / "Links" / "ghdl.exe"
+            if winget_link.is_file():
+                path = str(winget_link)
+
+        if path is None:
+            fallback = get_install_dir() / "ghdl" / "bin" / "ghdl.exe"
             if fallback.is_file():
                 path = str(fallback)
 
