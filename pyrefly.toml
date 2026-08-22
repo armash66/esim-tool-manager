@@ -1,0 +1,6 @@
+[project]
+name = "esim-tool-manager"
+version = "1.0.0"
+
+[tool.pyrefly]
+search-paths = ["src"]
