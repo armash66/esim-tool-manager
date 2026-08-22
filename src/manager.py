@@ -48,17 +48,12 @@ def cmd_env(args: argparse.Namespace) -> None:
             status_str = "ON PATH" if status.is_on_path else "MISSING FROM PATH"
             print(f"{status.name}: {parent_dir} [{status_str}]")
 
-    print("\nEnvironment PATH Configuration Instructions:")
-    if sys.platform == "win32":
-        ps_path = ";".join(bin_paths)
-        print("  PowerShell:")
-        print(f'    $env:Path += ";{ps_path}"')
-        print("  Command Prompt:")
-        print(f'    set PATH=%PATH%;{ps_path}\n')
+    print()
+    if bin_paths:
+        adapter = get_platform_adapter()
+        print(adapter.format_path_instructions(bin_paths) + "\n")
     else:
-        bash_path = ":".join(bin_paths)
-        print("  POSIX Shell (Bash/Zsh):")
-        print(f'    export PATH="$PATH:{bash_path}"\n')
+        print("No installed tools detected. Install tools first to view PATH configuration instructions.\n")
 
 
 def cmd_config(args: argparse.Namespace) -> None:
