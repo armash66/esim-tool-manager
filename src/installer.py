@@ -19,7 +19,11 @@ def find_winget() -> str | None:
 
 
 class KiCadInstaller:
+    def __init__(self):
+        self.last_error: str | None = None
+
     def install(self) -> bool:
+        self.last_error = None
         logger.info("Starting KiCad installation via WinGet...")
 
         # Pre-check: if already installed and verified, skip
@@ -32,7 +36,8 @@ class KiCadInstaller:
 
         winget = find_winget()
         if not winget:
-            msg = "WinGet not found. Please install/enable App Installer."
+            msg = "Required prerequisite WinGet was not found. Please install/enable App Installer."
+            self.last_error = msg
             print(msg)
             logger.error(msg)
             return False
@@ -59,7 +64,10 @@ class KiCadInstaller:
                 logger.info(f"WinGet stdout: {result.stdout.strip()}")
             if result.stderr:
                 logger.warning(f"WinGet stderr: {result.stderr.strip()}")
+            if result.returncode not in (0, 2316632107, -1978238933):
+                self.last_error = f"WinGet installer exited with code {result.returncode}."
         except Exception as e:
+            self.last_error = f"Installer execution error: {e}"
             logger.error(f"Error running WinGet: {e}")
             return False
 
@@ -69,6 +77,8 @@ class KiCadInstaller:
             logger.info(f"KiCad installation verified: {info.version} at {info.path}")
             return True
         else:
+            if not self.last_error:
+                self.last_error = "Installation completed, but KiCad executable (kicad-cli.exe) could not be verified on disk."
             logger.error("WinGet finished but KiCadDetector could not find kicad-cli.exe.")
             return False
 
@@ -110,12 +120,17 @@ class KiCadInstaller:
 
 
 class GhdlInstaller:
+    def __init__(self):
+        self.last_error: str | None = None
+
     def install(self) -> bool:
+        self.last_error = None
         logger.info("Starting GHDL installation check...")
         if sys.platform == "win32":
             winget = find_winget()
             if not winget:
-                msg = "WinGet not found for GHDL installation. Please install WinGet or GHDL manually."
+                msg = "Required prerequisite WinGet was not found. Please install WinGet."
+                self.last_error = msg
                 print(msg)
                 logger.error(msg)
                 return False
@@ -127,16 +142,26 @@ class GhdlInstaller:
         try:
             result = subprocess.run(cmd, text=True)
             if result.returncode not in (0, 2316632107, -1978238933):
-                msg = f"GHDL installation finished with exit code {result.returncode}."
+                msg = f"GHDL installer exited with code {result.returncode}."
+                self.last_error = msg
                 print(msg)
                 logger.error(msg)
                 return False
-            logger.info("GHDL installation finished successfully.")
-            return True
         except Exception as e:
             msg = f"Error installing GHDL: {e}"
+            self.last_error = msg
             print(msg)
             logger.error(msg)
+            return False
+
+        from detector import GhdlDetector
+        info = GhdlDetector().detect()
+        if info.installed:
+            logger.info("GHDL installation finished and verified successfully.")
+            return True
+        else:
+            self.last_error = "Installation completed, but executable ghdl.exe could not be verified on disk."
+            logger.error(self.last_error)
             return False
 
     def uninstall(self) -> bool:
@@ -161,7 +186,11 @@ class GhdlInstaller:
 
 
 class VerilatorInstaller:
+    def __init__(self):
+        self.last_error: str | None = None
+
     def install(self) -> bool:
+        self.last_error = None
         logger.info("Starting Verilator installation check...")
         if sys.platform == "win32":
             pacman = Path("C:/msys64/usr/bin/pacman.exe")
@@ -169,12 +198,12 @@ class VerilatorInstaller:
                 cmd = [str(pacman), "-S", "--noconfirm", "mingw-w64-x86_64-verilator"]
             else:
                 msg = (
-                    "\nVerilator installation on Windows requires MSYS2 (pacman),\n"
-                    "but MSYS2 was not found at C:\\msys64\\usr\\bin\\pacman.exe.\n\n"
+                    "Required prerequisite MSYS2 (pacman) was not found at C:\\msys64\\usr\\bin\\pacman.exe.\n\n"
                     "Recommendation: Install MSYS2 from https://www.msys2.org/\n"
                     "and ensure pacman is available, then retry the installation."
                 )
-                print(msg)
+                self.last_error = msg
+                print("\n" + msg)
                 logger.error(msg)
                 return False
         else:
@@ -184,16 +213,26 @@ class VerilatorInstaller:
         try:
             result = subprocess.run(cmd, text=True)
             if result.returncode not in (0, 2316632107, -1978238933):
-                msg = f"Verilator installation finished with exit code {result.returncode}."
+                msg = f"Verilator installer exited with code {result.returncode}."
+                self.last_error = msg
                 print(msg)
                 logger.error(msg)
                 return False
-            logger.info("Verilator installation finished successfully.")
-            return True
         except Exception as e:
             msg = f"Error installing Verilator: {e}"
+            self.last_error = msg
             print(msg)
             logger.error(msg)
+            return False
+
+        from detector import VerilatorDetector
+        info = VerilatorDetector().detect()
+        if info.installed:
+            logger.info("Verilator installation finished and verified successfully.")
+            return True
+        else:
+            self.last_error = "Installation completed, but executable verilator could not be verified on disk."
+            logger.error(self.last_error)
             return False
 
     def uninstall(self) -> bool:
@@ -231,11 +270,14 @@ class NgspiceInstaller:
     def __init__(self, archive: Path):
         self.archive = archive
         self.install_dir = get_install_dir() / "ngspice"
+        self.last_error: str | None = None
 
     def install(self) -> bool:
+        self.last_error = None
         logger.info(f"Starting Ngspice installation from {self.archive}")
         if not self.archive.is_file():
-            msg = f"Archive not found: {self.archive}"
+            msg = f"Download archive not found at {self.archive}. Please verify network connection or download path."
+            self.last_error = msg
             print(msg)
             logger.error(msg)
             return False
@@ -251,12 +293,15 @@ class NgspiceInstaller:
                 z.extractall(path=version_dir)
             logger.info(f"Extracted {self.archive} to {version_dir}")
         except Exception as e:
-            logger.error(f"Extraction failed: {e}")
+            msg = f"Archive extraction failed: {e}"
+            self.last_error = msg
+            logger.error(msg)
             return False
 
         exe = version_dir / "Spice64" / "bin" / "ngspice.exe"
         if not exe.is_file():
-            msg = f"Installation failed: ngspice.exe not found in {version_dir} after extraction."
+            msg = f"Installation verification failed: ngspice.exe not found in {version_dir} after extraction."
+            self.last_error = msg
             print(msg)
             logger.error(msg)
             return False

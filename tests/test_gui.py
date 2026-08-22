@@ -75,3 +75,24 @@ def test_gui_install_all_uses_registry(monkeypatch):
     assert "ngspice" in install_calls
     assert "ghdl" in install_calls
     assert "verilator" in install_calls
+
+
+def test_gui_installer_last_error_surfacing(monkeypatch):
+    """Test that installers record specific error reasons in last_error for GUI consumption."""
+    from installer import VerilatorInstaller, NgspiceInstaller
+    from pathlib import Path
+
+    # Verilator missing pacman on Windows
+    v_inst = VerilatorInstaller()
+    monkeypatch.setattr("sys.platform", "win32")
+    monkeypatch.setattr("pathlib.Path.is_file", lambda self: False)
+    assert v_inst.install() is False
+    assert v_inst.last_error is not None
+    assert "MSYS2" in v_inst.last_error
+
+    # Ngspice missing archive
+    n_inst = NgspiceInstaller(Path("nonexistent.7z"))
+    assert n_inst.install() is False
+    assert n_inst.last_error is not None
+    assert "Download archive not found" in n_inst.last_error
+

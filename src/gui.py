@@ -205,8 +205,13 @@ class ESimToolManagerGUI:
                     self.log(f"Installation of {raw_val} completed successfully.")
                     self.root.after(0, self.refresh_status)
                 else:
-                    self.log(f"Installation of {raw_val} failed.")
-                    self.root.after(0, lambda: messagebox.showerror("Installation Failed", f"Installation of {raw_val} failed. Check log for details."))
+                    err_reason = getattr(installer, "last_error", None)
+                    reason_msg = f"\n\nReason:\n{err_reason}" if err_reason else ""
+                    self.log(f"Installation of {raw_val} failed." + (f" ({err_reason})" if err_reason else ""))
+                    self.root.after(0, lambda msg=reason_msg: messagebox.showerror(
+                        "Installation Failed",
+                        f"Installation of {raw_val} failed.{msg}\n\nCheck Activity Log for details."
+                    ))
             finally:
                 self.root.after(0, lambda: self.install_btn.config(state=tk.NORMAL))
 
@@ -273,18 +278,20 @@ class ESimToolManagerGUI:
                             self.log(f"{info['name']}: installation completed successfully.")
                             succeeded.append(info['name'])
                         else:
-                            self.log(f"{info['name']}: installation failed.")
-                            failed.append(info['name'])
+                            err_reason = getattr(installer, "last_error", None)
+                            self.log(f"{info['name']}: installation failed." + (f" ({err_reason})" if err_reason else ""))
+                            failed.append(f"{info['name']}" + (f": {err_reason}" if err_reason else " (Failed)"))
                     except Exception as e:
                         self.log(f"{info['name']}: installation error: {e}")
-                        failed.append(info['name'])
+                        failed.append(f"{info['name']} (Error: {e})")
 
                 # Summary
                 if failed:
                     self.log(f"Install All completed with {len(failed)} failure(s): {', '.join(failed)}")
-                    self.root.after(0, lambda: messagebox.showerror(
+                    fail_msg = "\n• " + "\n• ".join(failed)
+                    self.root.after(0, lambda msg=fail_msg: messagebox.showerror(
                         "Install All",
-                        f"Install All completed with {len(failed)} failure(s):\n{', '.join(failed)}\n\nCheck Activity Log for details."
+                        f"Install All completed with {len(failed)} failure(s):\n{msg}\n\nCheck Activity Log for details."
                     ))
                 else:
                     self.log("All installation tasks completed.")
